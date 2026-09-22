@@ -39,7 +39,6 @@ type FlashReport = {
   DocNum: number;
   CustomerRefNo: string;
   CustomerName: string;
-  ManufacturerSerialNum: string;
   FechaFormateada: string;
   Series: number;
   U_Severidad: string;
@@ -95,7 +94,6 @@ export default function FlashReportsPage() {
                 <TableCell><strong>Doc. #</strong></TableCell>
                 <TableCell><strong>Cliente</strong></TableCell>
                 <TableCell><strong>Folio</strong></TableCell>
-                <TableCell><strong>Serie Equipo</strong></TableCell>
                 <TableCell><strong>Fecha</strong></TableCell>
                 <TableCell><strong>Severidad</strong></TableCell>
                 <TableCell><strong>Usuario</strong></TableCell>
@@ -105,7 +103,7 @@ export default function FlashReportsPage() {
             <TableBody>
               {reportes.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} align="center" sx={{ py: 3 }}>
+                  <TableCell colSpan={7} align="center" sx={{ py: 3 }}>
                     <Typography color="textSecondary">
                       No hay Flash Reports disponibles
                     </Typography>
@@ -117,7 +115,6 @@ export default function FlashReportsPage() {
                     <TableCell>{reporte.DocNum}</TableCell>
                     <TableCell>{reporte.CustomerName}</TableCell>
                     <TableCell>{reporte.CustomerRefNo}</TableCell>
-                    <TableCell>{reporte.ManufacturerSerialNum}</TableCell>
                     <TableCell>{reporte.FechaFormateada}</TableCell>
                     <TableCell>
                       <Chip

@@ -39,7 +39,6 @@ import {
   OrdenesTrabajoService,
   type ClienteSAP,
   type EmpleadoSAP,
-  type EquipoSAP,
   type TipoProblemaSAP,
 } from "../../../services/ordenesTrabajo";
 
@@ -79,18 +78,13 @@ interface ImageFile {
 
 type FormState = {
   folio: string;
+  serie: string;
   fechaInicio: string;
   horaInicioTrabajo: string;
   codigoCliente: string;
   nombreCliente: string;
-  noSerie: string;
-  itemCode: string;
-  horometro: string;
   descripcionFalla: string;
   trabajoRealizado: string;
-  fechaTermino: string;
-  horaSalida: string;
-  serie: string;
 
   realizoTrabajo: string;
   realizoTrabajoEmployeeID: string;
@@ -106,7 +100,7 @@ type FormState = {
   personaReporta: string;
   vistoBuenoCliente: string;
 
-  // Nuevos campos de Flash Report
+  // Campos de Flash Report
   clasificacionSuceso: string;
   costoAproximado: string;
   personaInvolucrada: string;
@@ -115,18 +109,13 @@ type FormState = {
 
 const initialState: FormState = {
   folio: "",
+  serie: "",
   fechaInicio: "",
   horaInicioTrabajo: "",
   codigoCliente: "",
   nombreCliente: "",
-  noSerie: "",
-  itemCode: "",
-  horometro: "",
   descripcionFalla: "",
   trabajoRealizado: "",
-  fechaTermino: "",
-  horaSalida: "",
-  serie: "",
 
   realizoTrabajo: "",
   realizoTrabajoEmployeeID: "",
@@ -142,7 +131,7 @@ const initialState: FormState = {
   personaReporta: "",
   vistoBuenoCliente: "",
 
-  // Nuevos campos de Flash Report
+  // Campos de Flash Report
   clasificacionSuceso: "",
   costoAproximado: "",
   personaInvolucrada: "",
@@ -153,16 +142,13 @@ export default function OTSeguridadPage() {
   const [form, setForm] = useState<FormState>(initialState);
 
   const [clientes, setClientes] = useState<ClienteSAP[]>([]);
-  const [equipos, setEquipos] = useState<EquipoSAP[]>([]);
   const [empleadosRealizo, setEmpleadosRealizo] = useState<EmpleadoSAP[]>([]);
   const [tiposProblema, setTiposProblema] = useState<TipoProblemaSAP[]>([]);
 
   const [showClientes, setShowClientes] = useState(false);
-  const [showEquipos, setShowEquipos] = useState(false);
   const [showRealizo, setShowRealizo] = useState(false);
 
   const [loadingClientes, setLoadingClientes] = useState(false);
-  const [loadingEquipos, setLoadingEquipos] = useState(false);
   const [loadingRealizo, setLoadingRealizo] = useState(false);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -175,7 +161,6 @@ export default function OTSeguridadPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const clienteSearch = useDebouncedValue(form.codigoCliente, 500);
-  const equipoSearch = useDebouncedValue(form.noSerie, 500);
   const realizoSearch = useDebouncedValue(form.realizoTrabajo, 500);
 
   const handleChange = (field: keyof FormState, value: string) => {
@@ -289,31 +274,6 @@ export default function OTSeguridadPage() {
 
     searchClientes();
   }, [clienteSearch]);
-
-  // Búsqueda de equipos
-  useEffect(() => {
-    if (!form.codigoCliente || !equipoSearch.trim()) {
-      setEquipos([]);
-      return;
-    }
-
-    const searchEquipos = async () => {
-      setLoadingEquipos(true);
-      try {
-        const results = await OrdenesTrabajoService.buscarEquiposCliente(
-          form.codigoCliente,
-          equipoSearch
-        );
-        setEquipos(results);
-      } catch (error) {
-        console.error("Error buscando equipos:", error);
-      } finally {
-        setLoadingEquipos(false);
-      }
-    };
-
-    searchEquipos();
-  }, [form.codigoCliente, equipoSearch]);
 
   // Búsqueda de técnicos
   useEffect(() => {
@@ -468,18 +428,6 @@ export default function OTSeguridadPage() {
             </Box>
           )}
 
-          {/* Equipo */}
-          <TextField
-            label="No. Serie / Equipo"
-            value={form.noSerie}
-            onChange={(e) => handleChange("noSerie", e.target.value.toUpperCase())}
-            fullWidth
-            disabled={!form.codigoCliente}
-            InputProps={{
-              endAdornment: loadingEquipos && <CircularProgress size={20} />,
-            }}
-          />
-
           {/* Fechas */}
           <Grid container spacing={2}>
             <Grid item xs={12} sm={6}>
@@ -502,29 +450,6 @@ export default function OTSeguridadPage() {
                 InputLabelProps={{ shrink: true }}
                 fullWidth
                 required
-              />
-            </Grid>
-          </Grid>
-
-          <Grid container spacing={2}>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                label="Fecha Término"
-                type="date"
-                value={form.fechaTermino}
-                onChange={(e) => handleChange("fechaTermino", e.target.value)}
-                InputLabelProps={{ shrink: true }}
-                fullWidth
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                label="Hora Salida"
-                type="time"
-                value={form.horaSalida}
-                onChange={(e) => handleChange("horaSalida", e.target.value)}
-                InputLabelProps={{ shrink: true }}
-                fullWidth
               />
             </Grid>
           </Grid>
@@ -591,6 +516,21 @@ export default function OTSeguridadPage() {
             {SEVERIDADES.map((s) => (
               <MenuItem key={s.value} value={s.value}>
                 {s.label}
+              </MenuItem>
+            ))}
+          </TextField>
+
+          {/* Relación del Suceso (Tipo de Problema) */}
+          <TextField
+            select
+            label="Relación del Suceso"
+            value={form.tipoProblema}
+            onChange={(e) => handleChange("tipoProblema", e.target.value)}
+            fullWidth
+          >
+            {tiposProblema.map((t) => (
+              <MenuItem key={t.TipoProblem} value={t.TipoProblem}>
+                {t.Descripcion}
               </MenuItem>
             ))}
           </TextField>
