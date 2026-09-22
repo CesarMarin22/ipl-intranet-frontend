@@ -42,6 +42,7 @@ import {
 } from "../../../services/ordenesTrabajo";
 
 import LoaderOverlay from "../../../shared/components/LoaderOverlay";
+import { me, type MeResponse } from "../../../services/auth";
 
 const SUCURSALES = [
   { value: "87", label: "AGS" },
@@ -117,6 +118,7 @@ const initialState: FormState = {
 
 export default function OTSeguridadPage() {
   const [form, setForm] = useState<FormState>(initialState);
+  const [user, setUser] = useState<MeResponse | null>(null);
 
   const [clientes, setClientes] = useState<ClienteSAP[]>([]);
   const [tiposProblema, setTiposProblema] = useState<TipoProblemaSAP[]>([]);
@@ -208,14 +210,28 @@ export default function OTSeguridadPage() {
     window.print();
   };
 
-  // Cargar tipos de problema al montar
+  // Cargar datos al montar
   useEffect(() => {
     const loadData = async () => {
       try {
+        const userData = await me();
+        setUser(userData);
+
+        // Solo perfil 1 (Admin) o 4 (Seguridad) pueden crear Flash Report
+        if (userData.authenticated && userData.perfil && ![1, 4].includes(userData.perfil)) {
+          showError("Acceso denegado", "Solo Seguridad (perfil 4) puede crear Flash Reports");
+          return;
+        }
+
         const tipos = await OrdenesTrabajoService.tiposProblema();
         setTiposProblema(tipos);
+
+        // Si el usuario tiene sucursal asignada, establecerla
+        if (userData.authenticated && userData.sucursal) {
+          handleChange("serie", String(userData.sucursal));
+        }
       } catch (error) {
-        console.error("Error cargando tipos de problema:", error);
+        console.error("Error cargando datos:", error);
       } finally {
         setLoading(false);
       }
@@ -327,6 +343,8 @@ export default function OTSeguridadPage() {
             value={form.serie}
             onChange={(e) => handleChange("serie", e.target.value)}
             fullWidth
+            disabled={user && ![1, 4].includes(user.perfil || 0)}
+            helperText={user && ![1, 4].includes(user.perfil || 0) ? "Tu sucursal es asignada automáticamente" : ""}
           >
             {SUCURSALES.map((s) => (
               <MenuItem key={s.value} value={s.value}>

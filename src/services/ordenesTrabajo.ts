@@ -145,6 +145,14 @@ export const OrdenesTrabajoService = {
     return res.data.data;
   },
 
+  listarNormal: async (page = 1) => {
+    const res = await api.get<ApiResponse<any>>(
+      "/ordenes-trabajo/normal",
+      { params: { page } }
+    );
+    return res.data.data;
+  },
+
   obtenerSeguimiento: async (docnum: number | string) => {
     const res = await api.get<ApiResponse<any>>(
       `/ordenes-trabajo/${docnum}/seguimiento`

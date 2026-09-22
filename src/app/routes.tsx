@@ -34,6 +34,7 @@ import OTNormalPage from "../modules/ordenes-trabajo/pages/OTNormalPage";
 import FormulariosPage from "../modules/intranet/pages/FormulariosPage";
 import OTAudiPage from "../modules/ordenes-trabajo/pages/OTAudiPage";
 import OTSeguridadPage from "../modules/ordenes-trabajo/pages/OTSeguridadPage";
+import DashboardPage from "../modules/ordenes-trabajo/pages/DashboardPage";
 import FlashReportsPage from "../modules/ordenes-trabajo/pages/FlashReportsPage";
 import SeguimientoFlashPage from "../modules/ordenes-trabajo/pages/SeguimientoFlashPage";
 import DetallesOTPage from "../modules/ordenes-trabajo/pages/DetallesOTPage";
@@ -358,6 +359,15 @@ export default function AppRoutes({
           element={
             <ProtectedModuleRoute moduleName="PERMISOS" actionName="VER">
               <PermissionsPage />
+            </ProtectedModuleRoute>
+          }
+        />
+
+        <Route
+          path="/ordenes-trabajo"
+          element={
+            <ProtectedModuleRoute moduleName="VER_OT" actionName="VER">
+              <DashboardPage />
             </ProtectedModuleRoute>
           }
         />
