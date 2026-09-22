@@ -38,7 +38,6 @@ import {
 import {
   OrdenesTrabajoService,
   type ClienteSAP,
-  type EmpleadoSAP,
   type TipoProblemaSAP,
 } from "../../../services/ordenesTrabajo";
 
@@ -77,62 +76,40 @@ interface ImageFile {
 }
 
 type FormState = {
-  folio: string;
   serie: string;
+  clasificacionSuceso: string;
+  tipoProblema: string;
   fechaInicio: string;
   horaInicioTrabajo: string;
+  severidad: string;
   codigoCliente: string;
   nombreCliente: string;
-  descripcionFalla: string;
-  trabajoRealizado: string;
-
-  realizoTrabajo: string;
-  realizoTrabajoEmployeeID: string;
-
-  tipoProblema: string;
-  severidad: string;
   areaTrabajo: string;
+  descripcionSuceso: string;
+  posibleCausa: string;
   accionesSituacion: string;
   planAccion: string;
   leccionesAprendidas: string;
-  posibleCausa: string;
-
-  personaReporta: string;
-  vistoBuenoCliente: string;
-
-  // Campos de Flash Report
-  clasificacionSuceso: string;
   costoAproximado: string;
   personaInvolucrada: string;
   nombreSupervisor: string;
 };
 
 const initialState: FormState = {
-  folio: "",
   serie: "",
+  clasificacionSuceso: "",
+  tipoProblema: "",
   fechaInicio: "",
   horaInicioTrabajo: "",
+  severidad: "",
   codigoCliente: "",
   nombreCliente: "",
-  descripcionFalla: "",
-  trabajoRealizado: "",
-
-  realizoTrabajo: "",
-  realizoTrabajoEmployeeID: "",
-
-  tipoProblema: "",
-  severidad: "",
   areaTrabajo: "",
+  descripcionSuceso: "",
+  posibleCausa: "",
   accionesSituacion: "",
   planAccion: "",
   leccionesAprendidas: "",
-  posibleCausa: "",
-
-  personaReporta: "",
-  vistoBuenoCliente: "",
-
-  // Campos de Flash Report
-  clasificacionSuceso: "",
   costoAproximado: "",
   personaInvolucrada: "",
   nombreSupervisor: "",
@@ -142,14 +119,11 @@ export default function OTSeguridadPage() {
   const [form, setForm] = useState<FormState>(initialState);
 
   const [clientes, setClientes] = useState<ClienteSAP[]>([]);
-  const [empleadosRealizo, setEmpleadosRealizo] = useState<EmpleadoSAP[]>([]);
   const [tiposProblema, setTiposProblema] = useState<TipoProblemaSAP[]>([]);
 
   const [showClientes, setShowClientes] = useState(false);
-  const [showRealizo, setShowRealizo] = useState(false);
 
   const [loadingClientes, setLoadingClientes] = useState(false);
-  const [loadingRealizo, setLoadingRealizo] = useState(false);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -161,7 +135,6 @@ export default function OTSeguridadPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const clienteSearch = useDebouncedValue(form.codigoCliente, 500);
-  const realizoSearch = useDebouncedValue(form.realizoTrabajo, 500);
 
   const handleChange = (field: keyof FormState, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -275,38 +248,12 @@ export default function OTSeguridadPage() {
     searchClientes();
   }, [clienteSearch]);
 
-  // Búsqueda de técnicos
-  useEffect(() => {
-    if (!realizoSearch.trim()) {
-      setEmpleadosRealizo([]);
-      return;
-    }
-
-    const searchEmpleados = async () => {
-      setLoadingRealizo(true);
-      try {
-        const results = await OrdenesTrabajoService.buscarEmpleados(
-          realizoSearch,
-          false
-        );
-        setEmpleadosRealizo(results);
-      } catch (error) {
-        console.error("Error buscando técnicos:", error);
-      } finally {
-        setLoadingRealizo(false);
-      }
-    };
-
-    searchEmpleados();
-  }, [realizoSearch]);
-
   const validateForm = (): boolean => {
     const required = [
       "codigoCliente",
       "fechaInicio",
       "horaInicioTrabajo",
-      "descripcionFalla",
-      "trabajoRealizado",
+      "descripcionSuceso",
       "severidad",
       "areaTrabajo",
     ];
@@ -318,13 +265,6 @@ export default function OTSeguridadPage() {
       }
     }
 
-    if (!validateDateTimeRange(form.fechaInicio, form.horaInicioTrabajo,
-        form.fechaTermino, form.horaSalida)) {
-      showError("Validación", "Las fechas/horas no son válidas");
-      return false;
-    }
-
-    // Validar "Posible Causa" si está presente
     if (form.posibleCausa && form.posibleCausa.length > 254) {
       showError("Validación", "La Posible Causa no puede exceder 254 caracteres");
       return false;
@@ -342,8 +282,6 @@ export default function OTSeguridadPage() {
       const payload = {
         ...form,
         fechaInicio: formatDateForSAP(form.fechaInicio),
-        fechaTermino: formatDateForSAP(form.fechaTermino),
-        realizoTrabajo: form.realizoTrabajoEmployeeID,
         "data-tipo": "seguridad",
         U_Severidad: form.severidad,
         U_ClasificacionSuceso: form.clasificacionSuceso,
@@ -454,22 +392,11 @@ export default function OTSeguridadPage() {
             </Grid>
           </Grid>
 
-          {/* Descripción de falla */}
+          {/* Descripción del Suceso */}
           <TextField
-            label="Descripción de la Falla"
-            value={form.descripcionFalla}
-            onChange={(e) => handleChange("descripcionFalla", e.target.value)}
-            multiline
-            rows={3}
-            fullWidth
-            required
-          />
-
-          {/* Trabajo realizado */}
-          <TextField
-            label="Trabajo Realizado"
-            value={form.trabajoRealizado}
-            onChange={(e) => handleChange("trabajoRealizado", e.target.value)}
+            label="Descripción del Suceso"
+            value={form.descripcionSuceso}
+            onChange={(e) => handleChange("descripcionSuceso", e.target.value)}
             multiline
             rows={3}
             fullWidth
@@ -489,19 +416,6 @@ export default function OTSeguridadPage() {
             rows={2}
             fullWidth
             helperText={`${form.posibleCausa.length} / 254 caracteres`}
-          />
-
-          {/* Técnico */}
-          <TextField
-            label="Técnico que Realizó"
-            value={form.realizoTrabajo}
-            onChange={(e) => handleChange("realizoTrabajo", e.target.value.toUpperCase())}
-            fullWidth
-            InputProps={{
-              endAdornment: loadingRealizo && <CircularProgress size={20} />,
-            }}
-            onFocus={() => setShowRealizo(true)}
-            onBlur={() => setTimeout(() => setShowRealizo(false), 200)}
           />
 
           {/* Severidad */}
