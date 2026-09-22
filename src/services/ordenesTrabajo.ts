@@ -135,4 +135,57 @@ export const OrdenesTrabajoService = {
     const res = await api.get<ApiResponse<any>>(`/ordenes-trabajo/${docnum}`);
     return res.data.data;
   },
+
+  // Flash Reports (OT Seguridad)
+  listarFlashReports: async (page = 1) => {
+    const res = await api.get<ApiResponse<any>>(
+      "/ordenes-trabajo/flash-reports",
+      { params: { page } }
+    );
+    return res.data.data;
+  },
+
+  obtenerSeguimiento: async (docnum: number | string) => {
+    const res = await api.get<ApiResponse<any>>(
+      `/ordenes-trabajo/${docnum}/seguimiento`
+    );
+    return res.data.data;
+  },
+
+  guardarSeguimiento: async (docnum: number | string, payload: any) => {
+    const res = await api.post<ApiResponse<any>>(
+      `/ordenes-trabajo/${docnum}/seguimiento`,
+      payload
+    );
+    return res.data.data;
+  },
+
+  // OT Audi
+  listarAudi: async (page = 1) => {
+    const res = await api.get<ApiResponse<any>>(
+      "/ordenes-trabajo/audi",
+      { params: { page } }
+    );
+    return res.data.data;
+  },
+
+  // Upload de imágenes para Flash Reports
+  subirImagenesFlash: async (flashRefId: string, formData: FormData) => {
+    const res = await api.post<ApiResponse<any>>(
+      "/ordenes-trabajo/subir-imagenes-flash",
+      formData,
+      {
+        headers: { "Content-Type": "multipart/form-data" },
+        params: { flashRefId },
+      }
+    );
+    return res.data.data;
+  },
+
+  verImagenesFlash: async (refId: string) => {
+    const res = await api.get<ApiResponse<any>>(
+      `/ordenes-trabajo/ver-imagenes-flash/${refId}`
+    );
+    return res.data.data;
+  },
 };

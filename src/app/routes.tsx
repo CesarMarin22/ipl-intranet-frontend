@@ -33,6 +33,10 @@ import SharedQRPage from "../modules/comedor/pages/SharedQRPage";
 import OTNormalPage from "../modules/ordenes-trabajo/pages/OTNormalPage";
 import FormulariosPage from "../modules/intranet/pages/FormulariosPage";
 import OTAudiPage from "../modules/ordenes-trabajo/pages/OTAudiPage";
+import OTSeguridadPage from "../modules/ordenes-trabajo/pages/OTSeguridadPage";
+import FlashReportsPage from "../modules/ordenes-trabajo/pages/FlashReportsPage";
+import SeguimientoFlashPage from "../modules/ordenes-trabajo/pages/SeguimientoFlashPage";
+import DetallesOTPage from "../modules/ordenes-trabajo/pages/DetallesOTPage";
 import SGCDocumentsPage from "../modules/sgc/pages/SGCDocumentsPage";
 import SGCDocumentFormPage from "../modules/sgc/pages/SGCDocumentFormPage";
 import SGCExternalDocumentsPage from "../modules/sgc/pages/SGCExternalDocumentsPage";
@@ -372,6 +376,42 @@ export default function AppRoutes({
           element={
             <ProtectedModuleRoute moduleName="OT_AUDI" actionName="VER">
               <OTAudiPage />
+            </ProtectedModuleRoute>
+          }
+        />
+
+        <Route
+          path="/ordenes-trabajo/seguridad"
+          element={
+            <ProtectedModuleRoute moduleName="OT_SEGURIDAD" actionName="VER">
+              <OTSeguridadPage />
+            </ProtectedModuleRoute>
+          }
+        />
+
+        <Route
+          path="/ordenes-trabajo/flash-reports"
+          element={
+            <ProtectedModuleRoute moduleName="OT_SEGURIDAD" actionName="VER">
+              <FlashReportsPage />
+            </ProtectedModuleRoute>
+          }
+        />
+
+        <Route
+          path="/ordenes-trabajo/seguridad/:docnum/seguimiento"
+          element={
+            <ProtectedModuleRoute moduleName="OT_SEGURIDAD" actionName="VER">
+              <SeguimientoFlashPage />
+            </ProtectedModuleRoute>
+          }
+        />
+
+        <Route
+          path="/ordenes-trabajo/:docnum"
+          element={
+            <ProtectedModuleRoute moduleName="VER_OT" actionName="VER">
+              <DetallesOTPage />
             </ProtectedModuleRoute>
           }
         />
