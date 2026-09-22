@@ -87,21 +87,46 @@ export default function DashboardPage() {
         return;
       }
 
-      // Cargar todas las OT del usuario
-      const dataNormal = await OrdenesTrabajoService.listarFlashReports(page);
+      // Cargar de los 3 endpoints
+      const [dataNormal, dataAudi, dataFlash] = await Promise.all([
+        OrdenesTrabajoService.listarNormal(page).catch(() => ({ ordenes: [] })),
+        OrdenesTrabajoService.listarAudi(page).catch(() => ({ ordenes: [] })),
+        OrdenesTrabajoService.listarFlashReports(page).catch(() => ({ llamadas: [] })),
+      ]);
 
-      const llamadas = (dataNormal.llamadas || []).map((ot: any) => ({
+      // Combinar todas las OT
+      const otesNormales = (dataNormal.ordenes || []).map((ot: any) => ({
         ...ot,
-        tipo: determinaTipo(ot),
+        tipo: "normal" as const,
       }));
 
+      const otesAudi = (dataAudi.ordenes || []).map((ot: any) => ({
+        ...ot,
+        tipo: "audi" as const,
+      }));
+
+      const otesFlash = (dataFlash.llamadas || []).map((ot: any) => ({
+        ...ot,
+        tipo: "seguridad" as const,
+      }));
+
+      const todasLasOts = [...otesNormales, ...otesAudi, ...otesFlash];
+
       // Filtrar por tipo si es necesario
-      const filtered = filterType === "all"
-        ? llamadas
-        : llamadas.filter((ot: OT) => ot.tipo === filterType);
+      const filtered =
+        filterType === "all"
+          ? todasLasOts
+          : todasLasOts.filter((ot: OT) => ot.tipo === filterType);
 
       setOts(filtered);
-      setTotalPages(dataNormal.total_paginas || 1);
+
+      // Calcular total de páginas (usamos el máximo de los 3 endpoints)
+      const maxPages = Math.max(
+        dataNormal.total_paginas || 1,
+        dataAudi.total_paginas || 1,
+        dataFlash.total_paginas || 1
+      );
+      setTotalPages(maxPages);
     } catch (error: any) {
       showError("Error", error.message || "No se pudieron cargar las OT");
     } finally {
@@ -109,11 +134,6 @@ export default function DashboardPage() {
     }
   };
 
-  const determinaTipo = (ot: any): "normal" | "audi" | "seguridad" => {
-    if (ot.CallType === 28) return "audi";
-    if (ot.CallType === 24) return "seguridad";
-    return "normal";
-  };
 
   const handleCrearOT = () => {
     if (!user) return;
@@ -141,7 +161,7 @@ export default function DashboardPage() {
 
   return (
     <Box>
-      <PageHeader title="Dashboard - Órdenes de Trabajo" />
+      <PageHeader title="Dashboard Servicio" />
 
       {/* Botón crear (visible en móvil) */}
       {user && [1, 2, 3, 4, 5].includes(user.perfil || 0) && (
