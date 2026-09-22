@@ -364,9 +364,9 @@ export default function AppRoutes({
         />
 
         <Route
-          path="/ordenes-trabajo"
+          path="/ordenes-trabajo/dashboard"
           element={
-            <ProtectedModuleRoute moduleName="VER_OT" actionName="VER">
+            <ProtectedModuleRoute moduleName="DASHBOARD_SERVICIO" actionName="VER">
               <DashboardPage />
             </ProtectedModuleRoute>
           }
