@@ -17,7 +17,7 @@ import {
   useTheme,
 } from "@mui/material";
 import { useEffect, useState, type ReactNode } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import AssignmentIcon from "@mui/icons-material/Assignment";
@@ -373,6 +373,9 @@ export default function DetallesOTPage() {
   const { docnum } = useParams<{ docnum: string }>();
   const navigate = useNavigate();
   const theme = useTheme();
+  const location = useLocation();
+  // Dashboard view (page/filter) we came from; falls back to the dashboard when opened directly
+  const volverA: string = (location.state as { volverA?: string } | null)?.volverA || "/ordenes-trabajo/dashboard";
 
   const [ot, setOt] = useState<OT | null>(null);
   const [tipoVista, setTipoVista] = useState<TipoVista>("normal");
@@ -400,7 +403,7 @@ export default function DetallesOTPage() {
         <Typography variant="h5" sx={{ fontWeight: 800, mb: 1 }}>
           No se encontró información de este registro
         </Typography>
-        <Button startIcon={<ArrowBackIcon />} onClick={() => navigate(-1)}>
+        <Button startIcon={<ArrowBackIcon />} onClick={() => navigate(volverA)}>
           Volver
         </Button>
       </Paper>
@@ -437,7 +440,7 @@ export default function DetallesOTPage() {
       >
         <Box sx={{ display: "flex", justifyContent: "space-between", gap: 2, flexWrap: "wrap", alignItems: "flex-start" }}>
           <Box sx={{ display: "flex", gap: 2, alignItems: "center", minWidth: 0 }}>
-            <IconButton onClick={() => navigate(-1)} aria-label="Volver" sx={{ bgcolor: alpha(theme.palette.text.primary, 0.06) }}>
+            <IconButton onClick={() => navigate(volverA)} aria-label="Volver" sx={{ bgcolor: alpha(theme.palette.text.primary, 0.06) }}>
               <ArrowBackIcon />
             </IconButton>
             <Box sx={{ minWidth: 0 }}>
@@ -485,7 +488,7 @@ export default function DetallesOTPage() {
             variant={puedeSeguimiento ? "contained" : "outlined"}
             color="warning"
             startIcon={<TaskAltIcon />}
-            onClick={() => navigate(`/ordenes-trabajo/seguridad/${ot.DocNum}/seguimiento`)}
+            onClick={() => navigate(`/ordenes-trabajo/seguridad/${ot.DocNum}/seguimiento`, { state: { volverA } })}
             sx={{ mt: 2.5, fontWeight: 800 }}
           >
             {puedeSeguimiento ? "Dar seguimiento / Cerrar" : "Ver seguimiento"}

@@ -19,7 +19,7 @@ import {
   MenuItem,
 } from "@mui/material";
 import { useEffect, useState, type ReactNode } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import AddIcon from "@mui/icons-material/Add";
 import ArrowDropDownIcon from "@mui/icons-material/ArrowDropDown";
 import VisibilityIcon from "@mui/icons-material/Visibility";
@@ -76,9 +76,25 @@ export default function DashboardPage() {
   const navigate = useNavigate();
   const [ots, setOts] = useState<OT[]>([]);
   const [loading, setLoading] = useState(true);
-  const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [filterType, setFilterType] = useState<"all" | "normal" | "audi" | "seguridad">("all");
+
+  // Page and filter live in the URL so "Volver" from a detail lands on the same view
+  const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const page = Math.max(1, Number(searchParams.get("page")) || 1);
+  const filterType = (["normal", "audi", "seguridad"].includes(searchParams.get("tipo") || "")
+    ? searchParams.get("tipo")
+    : "all") as "all" | "normal" | "audi" | "seguridad";
+  const actualizarVista = (cambios: { page?: number; tipo?: string }) => {
+    const params = new URLSearchParams(searchParams);
+    if (cambios.page !== undefined) params.set("page", String(cambios.page));
+    if (cambios.tipo !== undefined) {
+      if (cambios.tipo === "all") params.delete("tipo");
+      else params.set("tipo", cambios.tipo);
+    }
+    setSearchParams(params, { replace: true });
+  };
+  const setPage = (value: number) => actualizarVista({ page: value });
   const [nuevoMenuAnchor, setNuevoMenuAnchor] = useState<HTMLElement | null>(null);
 
   const { canView, canCreate, isLoading: loadingPermisos } = usePermissions();
@@ -198,7 +214,7 @@ export default function DashboardPage() {
 
   const handleVer = (docnum: number) => {
     localStorage.setItem("ultimaOTVista", String(docnum));
-    navigate(`/ordenes-trabajo/${docnum}`);
+    navigate(`/ordenes-trabajo/${docnum}`, { state: { volverA: location.pathname + location.search } });
   };
 
   const statsNormal = ots.filter((ot) => ot.tipo === "normal").length;
@@ -284,10 +300,7 @@ export default function DashboardPage() {
               size="small"
               label="Filtrar por tipo"
               value={filterType}
-              onChange={(e) => {
-                setFilterType(e.target.value as any);
-                setPage(1);
-              }}
+              onChange={(e) => actualizarVista({ tipo: e.target.value, page: 1 })}
               sx={{ width: 200 }}
             >
               <MenuItem value="all">Todos</MenuItem>

@@ -14,7 +14,7 @@ import {
   useTheme,
 } from "@mui/material";
 import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import TimelineIcon from "@mui/icons-material/Timeline";
@@ -67,6 +67,8 @@ export default function SeguimientoFlashPage() {
   const { docnum } = useParams<{ docnum: string }>();
   const navigate = useNavigate();
   const theme = useTheme();
+  const location = useLocation();
+  const volverA = (location.state as { volverA?: string } | null)?.volverA;
 
   const [ot, setOt] = useState<OT | null>(null);
   const [historial, setHistorial] = useState<RegistroSeguimiento[]>([]);
@@ -142,7 +144,7 @@ export default function SeguimientoFlashPage() {
         <Typography variant="h5" sx={{ fontWeight: 800, mb: 1 }}>
           No se encontró el Flash Report
         </Typography>
-        <Button startIcon={<ArrowBackIcon />} onClick={() => navigate(-1)}>
+        <Button startIcon={<ArrowBackIcon />} onClick={() => navigate(volverA || "/ordenes-trabajo/dashboard")}>
           Volver
         </Button>
       </Paper>
@@ -172,7 +174,7 @@ export default function SeguimientoFlashPage() {
         <Box sx={{ display: "flex", justifyContent: "space-between", gap: 2, flexWrap: "wrap", alignItems: "flex-start" }}>
           <Box sx={{ display: "flex", gap: 2, alignItems: "center", minWidth: 0 }}>
             <IconButton
-              onClick={() => navigate(`/ordenes-trabajo/${ot.DocNum}`)}
+              onClick={() => navigate(`/ordenes-trabajo/${ot.DocNum}`, { state: { volverA } })}
               aria-label="Volver al Flash Report"
               sx={{ bgcolor: alpha(theme.palette.text.primary, 0.06) }}
             >
