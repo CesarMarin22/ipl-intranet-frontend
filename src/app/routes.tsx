@@ -375,7 +375,7 @@ export default function AppRoutes({
         <Route
           path="/ordenes-trabajo/normal"
           element={
-            <ProtectedModuleRoute moduleName="OT_NORMAL" actionName="VER">
+            <ProtectedModuleRoute moduleName="OT_NORMAL" actionName="CREAR">
               <OTNormalPage />
             </ProtectedModuleRoute>
           }
@@ -384,7 +384,7 @@ export default function AppRoutes({
         <Route
           path="/ordenes-trabajo/audi"
           element={
-            <ProtectedModuleRoute moduleName="OT_AUDI" actionName="VER">
+            <ProtectedModuleRoute moduleName="OT_AUDI" actionName="CREAR">
               <OTAudiPage />
             </ProtectedModuleRoute>
           }
@@ -393,7 +393,7 @@ export default function AppRoutes({
         <Route
           path="/ordenes-trabajo/seguridad"
           element={
-            <ProtectedModuleRoute moduleName="OT_SEGURIDAD" actionName="VER">
+            <ProtectedModuleRoute moduleName="OT_SEGURIDAD" actionName="CREAR">
               <OTSeguridadPage />
             </ProtectedModuleRoute>
           }

@@ -437,7 +437,7 @@ export default function OTSeguridadPage() {
   return (
     <Box sx={{ "@media print": { "& .no-print": { display: "none" } } }}>
       {savingStep && <LoaderOverlay label={savingStep} />}
-      <PageHeader title="Crear Flash Report (OT Seguridad)" />
+      <PageHeader title="Nuevo Flash Report" />
 
       <Paper sx={{ p: 3, mt: 3, "@media print": { boxShadow: "none" } }}>
         <Box sx={{ display: "grid", gap: 2 }}>

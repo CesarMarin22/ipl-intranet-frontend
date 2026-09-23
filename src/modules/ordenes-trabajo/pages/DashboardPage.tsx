@@ -16,11 +16,13 @@ import {
   Pagination,
   Typography,
   TextField,
+  Menu,
   MenuItem,
 } from "@mui/material";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import AddIcon from "@mui/icons-material/Add";
+import ArrowDropDownIcon from "@mui/icons-material/ArrowDropDown";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import AssignmentIcon from "@mui/icons-material/Assignment";
 import SecurityIcon from "@mui/icons-material/Security";
@@ -31,6 +33,14 @@ import { OrdenesTrabajoService } from "../../../services/ordenesTrabajo";
 import { me, type MeResponse } from "../../../services/auth";
 import LoaderOverlay from "../../../shared/components/LoaderOverlay";
 import { showError } from "../../../shared/utils/swal";
+import { usePermissions } from "../../../shared/hooks/usePermissions";
+
+// What each record type needs: VER to list it on the dashboard, CREAR to show it under "+ Nuevo"
+const TIPOS_REGISTRO = [
+  { tipo: "seguridad", label: "Flash Report", modulo: "OT_SEGURIDAD", ruta: "/ordenes-trabajo/seguridad" },
+  { tipo: "normal", label: "Orden de Trabajo", modulo: "OT_NORMAL", ruta: "/ordenes-trabajo/normal" },
+  { tipo: "audi", label: "OT Audi", modulo: "OT_AUDI", ruta: "/ordenes-trabajo/audi" },
+] as const;
 
 type OT = {
   DocNum: number;
@@ -71,10 +81,15 @@ export default function DashboardPage() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [filterType, setFilterType] = useState<"all" | "normal" | "audi" | "seguridad">("all");
+  const [nuevoMenuAnchor, setNuevoMenuAnchor] = useState<HTMLElement | null>(null);
+
+  const { canView, canCreate, isLoading: loadingPermisos } = usePermissions();
+  const tiposCrear = TIPOS_REGISTRO.filter((t) => canCreate(t.modulo));
 
   useEffect(() => {
+    if (loadingPermisos) return;
     cargarDatos();
-  }, [page, filterType]);
+  }, [page, filterType, loadingPermisos]);
 
   const cargarDatos = async () => {
     setLoading(true);
@@ -87,11 +102,12 @@ export default function DashboardPage() {
         return;
       }
 
-      // Cargar de los 3 endpoints
+      // Only query the lists the user may view, so there are no 403s for modules they don't have
+      const vacio = { ordenes: [], llamadas: [], total_paginas: 1 };
       const [dataNormal, dataAudi, dataFlash] = await Promise.all([
-        OrdenesTrabajoService.listarNormal(page).catch(() => ({ ordenes: [] })),
-        OrdenesTrabajoService.listarAudi(page).catch(() => ({ ordenes: [] })),
-        OrdenesTrabajoService.listarFlashReports(page).catch(() => ({ llamadas: [] })),
+        canView("OT_NORMAL") ? OrdenesTrabajoService.listarNormal(page).catch(() => vacio) : vacio,
+        canView("OT_AUDI") ? OrdenesTrabajoService.listarAudi(page).catch(() => vacio) : vacio,
+        canView("OT_SEGURIDAD") ? OrdenesTrabajoService.listarFlashReports(page).catch(() => vacio) : vacio,
       ]);
 
       // Combinar todas las OT
@@ -142,16 +158,46 @@ export default function DashboardPage() {
   };
 
 
-  const handleCrearOT = () => {
-    if (!user) return;
-    if (user.perfil === 4) {
-      navigate("/ordenes-trabajo/seguridad");
-    } else if (user.perfil === 5) {
-      navigate("/ordenes-trabajo/audi");
-    } else {
-      navigate("/ordenes-trabajo/normal");
-    }
-  };
+  const botonNuevo =
+    tiposCrear.length === 0 ? null : tiposCrear.length === 1 ? (
+      <Button
+        variant="contained"
+        size="large"
+        startIcon={<AddIcon />}
+        onClick={() => navigate(tiposCrear[0].ruta)}
+      >
+        Nuevo {tiposCrear[0].label}
+      </Button>
+    ) : (
+      <>
+        <Button
+          variant="contained"
+          size="large"
+          startIcon={<AddIcon />}
+          endIcon={<ArrowDropDownIcon />}
+          onClick={(e) => setNuevoMenuAnchor(e.currentTarget)}
+        >
+          Nuevo
+        </Button>
+        <Menu
+          anchorEl={nuevoMenuAnchor}
+          open={Boolean(nuevoMenuAnchor)}
+          onClose={() => setNuevoMenuAnchor(null)}
+        >
+          {tiposCrear.map((t) => (
+            <MenuItem
+              key={t.tipo}
+              onClick={() => {
+                setNuevoMenuAnchor(null);
+                navigate(t.ruta);
+              }}
+            >
+              {t.label}
+            </MenuItem>
+          ))}
+        </Menu>
+      </>
+    );
 
   const handleVer = (docnum: number) => {
     localStorage.setItem("ultimaOTVista", String(docnum));
@@ -162,102 +208,58 @@ export default function DashboardPage() {
   const statsAudi = ots.filter((ot) => ot.tipo === "audi").length;
   const statsSeguridad = ots.filter((ot) => ot.tipo === "seguridad").length;
 
+  const tarjetas = [
+    canView("OT_NORMAL") && {
+      label: "Órdenes de Trabajo", valor: statsNormal, color: "white",
+      fondo: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+      icono: <AssignmentIcon sx={{ fontSize: 40 }} />,
+    },
+    canView("OT_AUDI") && {
+      label: "OT Audi", valor: statsAudi, color: "white",
+      fondo: "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)",
+      icono: <Gavel sx={{ fontSize: 40 }} />,
+    },
+    canView("OT_SEGURIDAD") && {
+      label: "Flash Reports", valor: statsSeguridad, color: "#333",
+      fondo: "linear-gradient(135deg, #fa709a 0%, #fee140 100%)",
+      icono: <SecurityIcon sx={{ fontSize: 40 }} />,
+    },
+    {
+      label: "Total", valor: ots.length, color: "white",
+      fondo: "linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)",
+      icono: <Typography variant="h3">📊</Typography>,
+    },
+  ].filter(Boolean) as { label: string; valor: number; color: string; fondo: string; icono: React.ReactNode }[];
+
   if (loading && ots.length === 0) {
     return <LoaderOverlay label="Cargando Órdenes de Trabajo..." />;
   }
 
   return (
     <Box>
-      <PageHeader title="Dashboard Servicio" />
-
-      {/* Botón crear (visible en móvil) */}
-      {user && [1, 2, 3, 4, 5].includes(user.perfil || 0) && (
-        <Box sx={{ display: { xs: "block", md: "none" }, textAlign: "center", mb: 3 }}>
-          <Button
-            variant="contained"
-            size="large"
-            startIcon={<AddIcon />}
-            onClick={handleCrearOT}
-            sx={{ mt: 2 }}
-          >
-            Crear OT
-          </Button>
-        </Box>
-      )}
+      <PageHeader title="Servicio" subtitle="Mis registros" action={botonNuevo} />
 
       {/* Cards resumen */}
       <Grid container spacing={2} sx={{ mb: 4 }}>
-        <Grid item xs={12} sm={6} lg={3}>
-          <Card sx={{ background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)" }}>
-            <CardContent sx={{ color: "white" }}>
-              <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-                <AssignmentIcon sx={{ fontSize: 40 }} />
-                <Box>
-                  <Typography variant="caption" sx={{ opacity: 0.8 }}>
-                    Órdenes de Trabajo
-                  </Typography>
-                  <Typography variant="h5" sx={{ fontWeight: 700 }}>
-                    {statsNormal}
-                  </Typography>
+        {tarjetas.map((t) => (
+          <Grid key={t.label} size={{ xs: 12, sm: 6, md: 12 / tarjetas.length }}>
+            <Card sx={{ background: t.fondo, height: "100%" }}>
+              <CardContent sx={{ color: t.color }}>
+                <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+                  {t.icono}
+                  <Box>
+                    <Typography variant="caption" sx={{ opacity: 0.8 }}>
+                      {t.label}
+                    </Typography>
+                    <Typography variant="h5" sx={{ fontWeight: 700 }}>
+                      {t.valor}
+                    </Typography>
+                  </Box>
                 </Box>
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        <Grid item xs={12} sm={6} md={3}>
-          <Card sx={{ background: "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)" }}>
-            <CardContent sx={{ color: "white" }}>
-              <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-                <Gavel sx={{ fontSize: 40 }} />
-                <Box>
-                  <Typography variant="caption" sx={{ opacity: 0.8 }}>
-                    OT Audi
-                  </Typography>
-                  <Typography variant="h5" sx={{ fontWeight: 700 }}>
-                    {statsAudi}
-                  </Typography>
-                </Box>
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        <Grid item xs={12} sm={6} md={3}>
-          <Card sx={{ background: "linear-gradient(135deg, #fa709a 0%, #fee140 100%)" }}>
-            <CardContent sx={{ color: "#333" }}>
-              <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-                <SecurityIcon sx={{ fontSize: 40 }} />
-                <Box>
-                  <Typography variant="caption" sx={{ opacity: 0.8 }}>
-                    Flash Reports
-                  </Typography>
-                  <Typography variant="h5" sx={{ fontWeight: 700 }}>
-                    {statsSeguridad}
-                  </Typography>
-                </Box>
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        <Grid item xs={12} sm={6} md={3}>
-          <Card sx={{ background: "linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)" }}>
-            <CardContent sx={{ color: "white" }}>
-              <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-                <Typography variant="h3">📊</Typography>
-                <Box>
-                  <Typography variant="caption" sx={{ opacity: 0.8 }}>
-                    Total
-                  </Typography>
-                  <Typography variant="h5" sx={{ fontWeight: 700 }}>
-                    {ots.length}
-                  </Typography>
-                </Box>
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
+              </CardContent>
+            </Card>
+          </Grid>
+        ))}
       </Grid>
 
       {/* Filtro y tabla */}
@@ -291,10 +293,12 @@ export default function DashboardPage() {
               }}
               sx={{ width: 200 }}
             >
-              <MenuItem value="all">Todas las OT</MenuItem>
-              <MenuItem value="normal">Órdenes de Trabajo</MenuItem>
-              <MenuItem value="audi">OT Audi</MenuItem>
-              <MenuItem value="seguridad">Flash Reports</MenuItem>
+              <MenuItem value="all">Todos</MenuItem>
+              {TIPOS_REGISTRO.filter((t) => canView(t.modulo)).map((t) => (
+                <MenuItem key={t.tipo} value={t.tipo}>
+                  {t.label}
+                </MenuItem>
+              ))}
             </TextField>
           </Box>
         </Box>
