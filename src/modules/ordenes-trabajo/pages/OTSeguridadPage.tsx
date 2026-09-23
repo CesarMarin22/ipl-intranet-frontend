@@ -65,9 +65,10 @@ const CLASIFICACION_SUCESO = [
 ];
 
 type Severidad = {
-  code: string;
-  label: string;
+  value: string;
+  text: string;
   color: string;
+  textColor: string;
 };
 
 interface ImageFile {
