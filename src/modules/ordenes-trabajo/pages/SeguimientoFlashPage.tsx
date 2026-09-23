@@ -43,12 +43,13 @@ type RegistroSeguimiento = {
   creado_en: string;
 };
 
-// Same statuses as OTA
+// A Flash Report with no follow-ups is implicitly "Abierto"; only the later states are selectable
 const ESTATUS = [
   { valor: "Abierto", color: "#9e9e9e" },
   { valor: "En Proceso", color: "#ffb300" },
   { valor: "Cerrado", color: "#2e7d32" },
 ] as const;
+const ESTATUS_SELECCIONABLES = ESTATUS.filter((e) => e.valor !== "Abierto");
 
 const colorEstatus = (estatus: string) => ESTATUS.find((e) => e.valor === estatus)?.color || "#9e9e9e";
 
@@ -148,8 +149,8 @@ export default function SeguimientoFlashPage() {
     );
   }
 
-  const estatusActual = historial[0]?.estatus || "";
-  const indiceActual = ESTATUS.findIndex((e) => e.valor === estatusActual);
+  const estatusActual = historial[0]?.estatus || "Abierto";
+  const indiceActual = Math.max(0, ESTATUS.findIndex((e) => e.valor === estatusActual));
   const cierre = historial.find((h) => h.estatus === "Cerrado");
   const accent = ot.SeveridadColorFondo || "#F18700";
 
@@ -391,7 +392,7 @@ export default function SeguimientoFlashPage() {
                   onChange={(_, valor: string | null) => valor && setForm({ ...form, estatus: valor })}
                   sx={{ mt: 0.5, mb: 2.5 }}
                 >
-                  {ESTATUS.map((e) => (
+                  {ESTATUS_SELECCIONABLES.map((e) => (
                     <ToggleButton
                       key={e.valor}
                       value={e.valor}
