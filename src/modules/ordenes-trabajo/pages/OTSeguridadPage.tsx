@@ -126,6 +126,9 @@ export default function OTSeguridadPage() {
   const [tiposProblema, setTiposProblema] = useState<TipoProblemaSAP[]>([]);
   const [severidades, setSeveridades] = useState<Severidad[]>([]);
 
+  // Autocomplete input value (separate from form.codigoCliente)
+  const [clienteInputValue, setClienteInputValue] = useState("");
+
   const [showClientes, setShowClientes] = useState(false);
 
   const [loadingClientes, setLoadingClientes] = useState(false);
@@ -139,7 +142,7 @@ export default function OTSeguridadPage() {
   const [openImageDialog, setOpenImageDialog] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const clienteSearch = useDebouncedValue(form.codigoCliente, 500);
+  const clienteSearch = useDebouncedValue(clienteInputValue, 500);
 
   const handleChange = (field: keyof FormState, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -501,12 +504,14 @@ export default function OTSeguridadPage() {
           <Autocomplete
             options={clientes}
             getOptionLabel={(option) => `${option.CardCode} - ${option.CardName}`}
-            inputValue={form.codigoCliente}
-            onInputChange={(_, value) => handleChange("codigoCliente", value.toUpperCase())}
+            inputValue={clienteInputValue}
+            onInputChange={(_, value) => setClienteInputValue(value.toUpperCase())}
             onChange={(_, value) => {
               if (value) {
                 handleChange("codigoCliente", value.CardCode);
                 handleChange("nombreCliente", value.CardName);
+                setClienteInputValue(`${value.CardCode} - ${value.CardName}`);
+                setClientes([]); // Clear results after selection
               }
             }}
             loading={loadingClientes}
