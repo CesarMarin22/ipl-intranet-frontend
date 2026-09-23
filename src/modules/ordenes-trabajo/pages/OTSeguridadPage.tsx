@@ -258,12 +258,6 @@ export default function OTSeguridadPage() {
         const userData = await me();
         setUser(userData);
 
-        // Solo perfil 1 (Admin) o 4 (Seguridad) pueden crear Flash Report
-        if (userData.authenticated && userData.perfil && ![1, 4].includes(userData.perfil)) {
-          showError("Acceso denegado", "Solo Seguridad (perfil 4) puede crear Flash Reports");
-          return;
-        }
-
         let tipos = await OrdenesTrabajoService.tiposProblema();
 
         // FALLBACK: If empty, use hardcoded values matching OTA

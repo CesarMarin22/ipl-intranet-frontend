@@ -5,7 +5,8 @@ import { usePermissions } from "../hooks/usePermissions";
 import { getFirstAllowedRoute } from "../utils/getFirstAllowedRoute";
 
 type Props = {
-  moduleName: string;
+  /** One module, or several where having any of them grants access */
+  moduleName: string | string[];
   actionName?: string;
   children: ReactNode;
 };
@@ -38,7 +39,9 @@ export default function ProtectedModuleRoute({
     );
   }
 
-  if (!hasPermission(moduleName, actionName)) {
+  const moduleNames = Array.isArray(moduleName) ? moduleName : [moduleName];
+
+  if (!moduleNames.some((name) => hasPermission(name, actionName))) {
     const firstAllowedRoute = getFirstAllowedRoute(permissions);
 
     return (
@@ -69,7 +72,7 @@ export default function ProtectedModuleRoute({
           </Typography>
 
           <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-            Permiso requerido: {moduleName} / {actionName}
+            Permiso requerido: {moduleNames.join(" o ")} / {actionName}
           </Typography>
 
           <Button
