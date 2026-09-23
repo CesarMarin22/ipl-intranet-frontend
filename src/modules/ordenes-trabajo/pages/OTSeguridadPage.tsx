@@ -510,7 +510,7 @@ export default function OTSeguridadPage() {
               if (value) {
                 handleChange("codigoCliente", value.CardCode);
                 handleChange("nombreCliente", value.CardName);
-                setClienteInputValue(`${value.CardCode} - ${value.CardName}`);
+                setClienteInputValue(""); // Clear input to prevent further searches
                 setClientes([]); // Clear results after selection
               }
             }}
