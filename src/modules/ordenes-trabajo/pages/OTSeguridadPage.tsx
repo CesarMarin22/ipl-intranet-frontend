@@ -73,6 +73,18 @@ type Severidad = {
   textColor: string;
 };
 
+const LINK_CAL_SEGURIDAD =
+  "https://docs.google.com/spreadsheets/d/1G-sMfF6a0tbbH6w_vLKifT-8VvbagRJo/edit?gid=439766604#gid=439766604";
+const LINK_CAL_OPERACION_VEHICULOS =
+  "https://docs.google.com/spreadsheets/d/1PU67h9Cfam-eAnKH0oGtcXuUhZeWKZ_S/edit?gid=752703734#gid=752703734";
+
+function getCalFmt15Link(tipo: string, nivel: string): string | null {
+  if (tipo === "24" && ["Critica", "Fatal"].includes(nivel)) return LINK_CAL_SEGURIDAD;
+  if (tipo === "28" && ["Alto", "CriticaO"].includes(nivel)) return LINK_CAL_OPERACION_VEHICULOS;
+  if (tipo === "27" && ["ModeradaV", "CriticaV"].includes(nivel)) return LINK_CAL_OPERACION_VEHICULOS;
+  return null;
+}
+
 interface ImageFile {
   id: string;
   file: File;
@@ -409,7 +421,7 @@ export default function OTSeguridadPage() {
     return <LoaderOverlay label="Cargando Flash Reports..." />;
   }
 
-  const showCALNote = form.severidad === "Critica" || form.severidad === "Fatal";
+  const calLink = getCalFmt15Link(form.clasificacionSuceso || "24", form.severidad);
 
   return (
     <Box sx={{ "@media print": { "& .no-print": { display: "none" } } }}>
@@ -516,15 +528,6 @@ export default function OTSeguridadPage() {
             ))}
           </TextField>
 
-          {/* Nota de Acción Correctiva CAL */}
-          {showCALNote && (
-            <Alert severity="warning">
-              <Typography variant="body2">
-                <strong>Nota Importante:</strong> Debido al nivel de severidad se deberá llenar el formato <strong>CAL-FMT-15</strong>
-              </Typography>
-            </Alert>
-          )}
-
           {/* 8. Lugar del Suceso (Código Cliente) */}
           <Autocomplete
             options={clientes}
@@ -577,6 +580,18 @@ export default function OTSeguridadPage() {
             fullWidth
             required
           />
+
+          {/* Nota de Acción Correctiva CAL-FMT-15 */}
+          {calLink && (
+            <Alert severity="error">
+              <Typography variant="body2" sx={{ fontWeight: 700 }}>
+                Debido al nivel de severidad se deberá de llenar el siguiente formato CAL-FMT-15 Acción Correctiva.{" "}
+                <a href={calLink} target="_blank" rel="noopener noreferrer" style={{ color: "inherit", textDecoration: "underline" }}>
+                  Da clic aquí para llenarlo
+                </a>
+              </Typography>
+            </Alert>
+          )}
 
           {/* 11. Descripción del Suceso */}
           <TextField
