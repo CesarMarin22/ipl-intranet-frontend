@@ -437,8 +437,8 @@ export default function OTSeguridadPage() {
             fullWidth
           >
             {tiposProblema.map((t) => (
-              <MenuItem key={t.TipoProblem} value={t.TipoProblem}>
-                {t.Descripcion}
+              <MenuItem key={t.ProblemTypeID} value={t.ProblemTypeID}>
+                {t.Name}
               </MenuItem>
             ))}
           </TextField>
