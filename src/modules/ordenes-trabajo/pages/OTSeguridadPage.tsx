@@ -225,7 +225,12 @@ export default function OTSeguridadPage() {
         }
 
         const tipos = await OrdenesTrabajoService.tiposProblema();
-        setTiposProblema(tipos);
+        // FILTER BY SEGURIDAD IDS (from OTA) - IDs permitidos para Flash Reports
+        const idsSeguridad = ["30", "202", "203"];
+        const tiposFiltrados = tipos.filter((t: any) =>
+          idsSeguridad.includes(String(t.ProblemTypeID))
+        );
+        setTiposProblema(tiposFiltrados);
 
         // Si el usuario tiene sucursal asignada, establecerla
         if (userData.authenticated && userData.sucursal) {
