@@ -1,4 +1,5 @@
 import {
+  Autocomplete,
   Box,
   Button,
   CircularProgress,
@@ -497,35 +498,36 @@ export default function OTSeguridadPage() {
           )}
 
           {/* 8. Lugar del Suceso (Código Cliente) */}
-          <TextField
-            label="Lugar del Suceso (Cliente)"
-            value={form.codigoCliente}
-            onChange={(e) => handleChange("codigoCliente", e.target.value.toUpperCase())}
+          <Autocomplete
+            options={clientes}
+            getOptionLabel={(option) => `${option.CardCode} - ${option.CardName}`}
+            inputValue={form.codigoCliente}
+            onInputChange={(_, value) => handleChange("codigoCliente", value.toUpperCase())}
+            onChange={(_, value) => {
+              if (value) {
+                handleChange("codigoCliente", value.CardCode);
+                handleChange("nombreCliente", value.CardName);
+              }
+            }}
+            loading={loadingClientes}
             fullWidth
             required
-            InputProps={{
-              endAdornment: loadingClientes && <CircularProgress size={20} />,
-            }}
-            onFocus={() => setShowClientes(true)}
-            onBlur={() => setTimeout(() => setShowClientes(false), 200)}
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                label="Lugar del Suceso (Cliente)"
+                InputProps={{
+                  ...params.InputProps,
+                  endAdornment: (
+                    <>
+                      {loadingClientes ? <CircularProgress color="inherit" size={20} /> : null}
+                      {params.InputProps.endAdornment}
+                    </>
+                  ),
+                }}
+              />
+            )}
           />
-          {showClientes && clientes.length > 0 && (
-            <Box sx={{ mt: -1.5, p: 1, border: "1px solid #ccc", maxHeight: 200, overflowY: "auto", bgcolor: "white", zIndex: 10, position: "relative" }}>
-              {clientes.map((c) => (
-                <Box
-                  key={c.CardCode}
-                  onClick={() => {
-                    handleChange("codigoCliente", c.CardCode);
-                    handleChange("nombreCliente", c.CardName);
-                    setShowClientes(false);
-                  }}
-                  sx={{ p: 1, cursor: "pointer", "&:hover": { bgcolor: "#f0f0f0" } }}
-                >
-                  {c.CardName}
-                </Box>
-              ))}
-            </Box>
-          )}
 
           {/* 9. Nombre del Lugar del Suceso */}
           <TextField
