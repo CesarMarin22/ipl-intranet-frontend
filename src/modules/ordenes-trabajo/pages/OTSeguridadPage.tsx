@@ -111,9 +111,30 @@ type FormState = {
   nombreSupervisor: string;
 };
 
+// In OTA every visible Flash Report field is mandatory; labels match the form
+const CAMPOS_REQUERIDOS: Record<keyof FormState, string> = {
+  serie: "Sucursal",
+  clasificacionSuceso: "Clasificación del Suceso",
+  tipoProblema: "Relación del Suceso",
+  fechaInicio: "Fecha",
+  horaInicioTrabajo: "Hora",
+  severidad: "Severidad",
+  codigoCliente: "Lugar del Suceso (Cliente)",
+  nombreCliente: "Nombre del Lugar del Suceso",
+  areaTrabajo: "Área del Suceso",
+  descripcionSuceso: "Descripción del Suceso",
+  posibleCausa: "Posible Causa",
+  accionesSituacion: "Acciones realizadas para atender la situación",
+  planAccion: "Plan de acción",
+  leccionesAprendidas: "Lecciones aprendidas",
+  costoAproximado: "Costo aproximado",
+  personaInvolucrada: "Persona Involucrada",
+  nombreSupervisor: "Nombre del Supervisor",
+};
+
 const initialState: FormState = {
   serie: "",
-  clasificacionSuceso: "",
+  clasificacionSuceso: "24",
   tipoProblema: "",
   fechaInicio: "",
   horaInicioTrabajo: "",
@@ -319,29 +340,25 @@ export default function OTSeguridadPage() {
   }, [form.clasificacionSuceso]);
 
   const validateForm = (): boolean => {
-    const required = [
-      "codigoCliente",
-      "fechaInicio",
-      "horaInicioTrabajo",
-      "descripcionSuceso",
-      "severidad",
-      "areaTrabajo",
-    ];
-
-    for (const field of required) {
-      if (!form[field as keyof FormState]?.trim()) {
-        showError("Validación", `${field} es obligatorio`);
-        return false;
-      }
-    }
-
-    if (form.posibleCausa && form.posibleCausa.length > 254) {
-      showError("Validación", "La Posible Causa no puede exceder 254 caracteres");
+    if (images.length === 0) {
+      showWarning("Debes adjuntar al menos una foto del suceso antes de guardar.", "Falta adjuntar fotos");
       return false;
     }
 
-    if (images.length === 0) {
-      showWarning("Debes adjuntar al menos una foto del suceso antes de guardar.", "Falta adjuntar fotos");
+    const faltantes = (Object.keys(CAMPOS_REQUERIDOS) as (keyof FormState)[])
+      .filter((campo) => !String(form[campo] ?? "").trim())
+      .map((campo) => CAMPOS_REQUERIDOS[campo]);
+
+    if (faltantes.length > 0) {
+      showWarning(
+        `Por favor, completa los siguientes campos: ${faltantes.join(", ")}`,
+        "Campos incompletos en Flash Report"
+      );
+      return false;
+    }
+
+    if (form.posibleCausa.length > 254) {
+      showWarning("La Posible Causa no puede exceder 254 caracteres.", "Validación");
       return false;
     }
 
@@ -405,7 +422,7 @@ export default function OTSeguridadPage() {
 
       setSavingStep(null);
       showSuccess("El Flash Report y sus fotos se guardaron correctamente.", "Guardado exitoso");
-      setForm(initialState);
+      setForm((prev) => ({ ...initialState, serie: prev.serie }));
       setClienteInputValue("");
       setImages([]);
     } catch (error: any) {
