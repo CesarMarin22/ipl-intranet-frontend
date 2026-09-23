@@ -226,10 +226,13 @@ export default function OTSeguridadPage() {
 
         const tipos = await OrdenesTrabajoService.tiposProblema();
         // FILTER BY SEGURIDAD IDS (from OTA) - IDs permitidos para Flash Reports
+        // OTA filters in frontend based on form type, matching script.js cargarTiposDeProblema()
         const idsSeguridad = ["30", "202", "203"];
-        const tiposFiltrados = tipos.filter((t: any) =>
+        const tiposFiltrados = (tipos || []).filter((t: any) =>
           idsSeguridad.includes(String(t.ProblemTypeID))
         );
+        console.log("Tipos cargados:", tipos);
+        console.log("Tipos filtrados:", tiposFiltrados);
         setTiposProblema(tiposFiltrados);
 
         // Si el usuario tiene sucursal asignada, establecerla
