@@ -224,9 +224,18 @@ export default function OTSeguridadPage() {
           return;
         }
 
-        const tipos = await OrdenesTrabajoService.tiposProblema();
+        let tipos = await OrdenesTrabajoService.tiposProblema();
+
+        // FALLBACK: If empty, use hardcoded values matching OTA
+        if (!tipos || tipos.length === 0) {
+          tipos = [
+            { ProblemTypeID: 30, Name: "SEGURIDAD" },
+            { ProblemTypeID: 202, Name: "OPERACIÓN" },
+            { ProblemTypeID: 203, Name: "VEHÍCULOS" },
+          ];
+        }
+
         // FILTER BY SEGURIDAD IDS (from OTA) - IDs permitidos para Flash Reports
-        // OTA filters in frontend based on form type, matching script.js cargarTiposDeProblema()
         const idsSeguridad = ["30", "202", "203"];
         const tiposFiltrados = (tipos || []).filter((t: any) =>
           idsSeguridad.includes(String(t.ProblemTypeID))
