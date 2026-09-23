@@ -180,7 +180,7 @@ export default function DashboardPage() {
 
       {/* Cards resumen */}
       <Grid container spacing={2} sx={{ mb: 4 }}>
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid item xs={12} sm={6} lg={3}>
           <Card sx={{ background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)" }}>
             <CardContent sx={{ color: "white" }}>
               <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
@@ -295,29 +295,15 @@ export default function DashboardPage() {
         {/* Tabla */}
         <TableContainer>
           <Table>
-            <TableHead sx={{ bgcolor: "#f5f5f5" }}>
+            <TableHead sx={{ bgcolor: "primary.main" }}>
               <TableRow>
-                <TableCell>
-                  <strong>OT SAP #</strong>
-                </TableCell>
-                <TableCell>
-                  <strong>Tipo</strong>
-                </TableCell>
-                <TableCell>
-                  <strong>Cliente</strong>
-                </TableCell>
-                <TableCell>
-                  <strong>Fecha</strong>
-                </TableCell>
-                <TableCell>
-                  <strong>Severidad</strong>
-                </TableCell>
-                <TableCell>
-                  <strong>Creado por</strong>
-                </TableCell>
-                <TableCell align="center">
-                  <strong>Acción</strong>
-                </TableCell>
+                <TableCell sx={{ color: "white", fontWeight: 700 }}>OT SAP #</TableCell>
+                <TableCell sx={{ color: "white", fontWeight: 700 }}>Tipo</TableCell>
+                <TableCell sx={{ color: "white", fontWeight: 700 }}>Cliente</TableCell>
+                <TableCell sx={{ color: "white", fontWeight: 700 }}>Fecha</TableCell>
+                <TableCell sx={{ color: "white", fontWeight: 700 }}>Severidad</TableCell>
+                <TableCell sx={{ color: "white", fontWeight: 700 }}>Creado por</TableCell>
+                <TableCell align="center" sx={{ color: "white", fontWeight: 700 }}>Acción</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
