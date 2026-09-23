@@ -112,6 +112,13 @@ export default function DashboardPage() {
 
       const todasLasOts = [...otesNormales, ...otesAudi, ...otesFlash];
 
+      // Ordenar por fecha descendente
+      todasLasOts.sort((a, b) => {
+        const dateA = new Date(a.FechaFormateada || "").getTime();
+        const dateB = new Date(b.FechaFormateada || "").getTime();
+        return dateB - dateA;
+      });
+
       // Filtrar por tipo si es necesario
       const filtered =
         filterType === "all"
