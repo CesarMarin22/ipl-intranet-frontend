@@ -16,21 +16,15 @@ import {
   Card,
   CardMedia,
   CardActions,
-  Chip,
 } from "@mui/material";
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useRef } from "react";
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import DeleteIcon from "@mui/icons-material/Delete";
 import PrintIcon from "@mui/icons-material/Print";
 import CloseIcon from "@mui/icons-material/Close";
-import ImageIcon from "@mui/icons-material/Image";
 
 import PageHeader from "../../../shared/components/PageHeader";
 import { useDebouncedValue } from "../../../shared/hooks/useDebouncedValue";
-import {
-  formatDateForSAP,
-  validateDateTimeRange,
-} from "../../../shared/utils/dateUtils";
 import {
   showError,
   showSuccess,
@@ -160,10 +154,10 @@ export default function OTSeguridadPage() {
   const [tiposProblema, setTiposProblema] = useState<TipoProblemaSAP[]>([]);
   const [severidades, setSeveridades] = useState<Severidad[]>([]);
 
-  // Autocomplete input value (separate from form.codigoCliente)
+  // Text shown in the Autocomplete vs. text that triggers a SAP search (only what the user types)
   const [clienteInputValue, setClienteInputValue] = useState("");
-
-  const [showClientes, setShowClientes] = useState(false);
+  const [clienteBusqueda, setClienteBusqueda] = useState("");
+  const [clienteSeleccionado, setClienteSeleccionado] = useState<ClienteSAP | null>(null);
 
   const [loadingClientes, setLoadingClientes] = useState(false);
   const [savingStep, setSavingStep] = useState<string | null>(null);
@@ -177,7 +171,7 @@ export default function OTSeguridadPage() {
   const [openImageDialog, setOpenImageDialog] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const clienteSearch = useDebouncedValue(clienteInputValue, 500);
+  const clienteSearch = useDebouncedValue(clienteBusqueda, 500);
 
   const handleChange = (field: keyof FormState, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -294,10 +288,7 @@ export default function OTSeguridadPage() {
 
   // Búsqueda de clientes
   useEffect(() => {
-    if (!clienteSearch.trim()) {
-      setClientes([]);
-      return;
-    }
+    if (!clienteSearch.trim()) return;
 
     const searchClientes = async () => {
       setLoadingClientes(true);
@@ -417,7 +408,9 @@ export default function OTSeguridadPage() {
       setSavingStep(null);
       showSuccess("El Flash Report y sus fotos se guardaron correctamente.", "Guardado exitoso");
       setForm((prev) => ({ ...initialState, serie: prev.serie }));
+      setClienteSeleccionado(null);
       setClienteInputValue("");
+      setClienteBusqueda("");
       setImages([]);
     } catch (error: any) {
       setSavingStep(null);
@@ -432,6 +425,7 @@ export default function OTSeguridadPage() {
     return <LoaderOverlay label="Cargando Flash Reports..." />;
   }
 
+  const sucursalFija = Boolean(user && ![1, 4].includes(user.perfil || 0));
   const calLink = getCalFmt15Link(form.clasificacionSuceso || "24", form.severidad);
 
   return (
@@ -456,8 +450,8 @@ export default function OTSeguridadPage() {
             value={form.serie}
             onChange={(e) => handleChange("serie", e.target.value)}
             fullWidth
-            disabled={user && ![1, 4].includes(user.perfil || 0)}
-            helperText={user && ![1, 4].includes(user.perfil || 0) ? "Tu sucursal es asignada automáticamente" : ""}
+            disabled={sucursalFija}
+            helperText={sucursalFija ? "Tu sucursal es asignada automáticamente" : ""}
           >
             {SUCURSALES.map((s) => (
               <MenuItem key={s.value} value={s.value}>
@@ -498,7 +492,7 @@ export default function OTSeguridadPage() {
 
           {/* 5 & 6. Fecha y Hora */}
           <Grid container spacing={2}>
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <TextField
                 label="Fecha"
                 type="date"
@@ -509,7 +503,7 @@ export default function OTSeguridadPage() {
                 required
               />
             </Grid>
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <TextField
                 label="Hora"
                 type="time"
@@ -542,23 +536,28 @@ export default function OTSeguridadPage() {
           {/* 8. Lugar del Suceso (Código Cliente) */}
           <Autocomplete
             options={clientes}
+            value={clienteSeleccionado}
             getOptionLabel={(option) => `${option.CardCode} - ${option.CardName}`}
+            isOptionEqualToValue={(option, value) => option.CardCode === value.CardCode}
+            filterOptions={(opciones) => opciones}
             inputValue={clienteInputValue}
-            onInputChange={(_, value) => setClienteInputValue(value.toUpperCase())}
+            onInputChange={(_, value, reason) => {
+              setClienteInputValue(value);
+              if (reason === "input") setClienteBusqueda(value.toUpperCase());
+            }}
             onChange={(_, value) => {
-              if (value) {
-                handleChange("codigoCliente", value.CardCode);
-                handleChange("nombreCliente", value.CardName);
-                setClienteInputValue(""); // Clear input to prevent further searches
-                setClientes([]); // Clear results after selection
-              }
+              setClienteSeleccionado(value);
+              setClienteBusqueda("");
+              handleChange("codigoCliente", value?.CardCode || "");
+              handleChange("nombreCliente", value?.CardName || "");
             }}
             loading={loadingClientes}
+            noOptionsText={clienteBusqueda ? "Sin resultados" : "Escribe el código o nombre del cliente"}
             fullWidth
-            required
             renderInput={(params) => (
               <TextField
                 {...params}
+                required
                 label="Lugar del Suceso (Cliente)"
                 InputProps={{
                   ...params.InputProps,
@@ -737,7 +736,7 @@ export default function OTSeguridadPage() {
                 </Typography>
                 <Grid container spacing={2}>
                   {images.map((image) => (
-                    <Grid item xs={12} sm={6} md={4} key={image.id}>
+                    <Grid size={{ xs: 12, sm: 6, md: 4 }} key={image.id}>
                       <Card>
                         <CardMedia
                           component="img"

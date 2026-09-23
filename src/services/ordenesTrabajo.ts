@@ -53,6 +53,12 @@ export type TipoProblemaSAP = {
 
 export type GuardarCSVPayload = Record<string, any>;
 
+export type ArchivoDrive = {
+  id: string;
+  name: string;
+  mimeType: string;
+};
+
 export const OrdenesTrabajoService = {
   buscarClientes: async (query: string) => {
     const res = await api.get<ApiResponse<SapListResponse<ClienteSAP>>>(
@@ -199,9 +205,12 @@ export const OrdenesTrabajoService = {
   },
 
   verImagenesFlash: async (refId: string) => {
-    const res = await api.get<ApiResponse<any>>(
-      `/ordenes-trabajo/ver-imagenes-flash/${refId}`
+    const res = await api.get<ApiResponse<{ archivos: ArchivoDrive[] }>>(
+      `/ordenes-trabajo/ver-imagenes-flash/${encodeURIComponent(refId)}`
     );
-    return res.data.data;
+    return res.data.data?.archivos || [];
   },
+
+  urlImagenDrive: (fileId: string) =>
+    `${api.defaults.baseURL}/ordenes-trabajo/imagen-drive/${encodeURIComponent(fileId)}`,
 };

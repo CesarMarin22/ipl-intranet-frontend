@@ -4,7 +4,6 @@ import {
   Card,
   CardContent,
   Chip,
-  CircularProgress,
   Grid,
   Paper,
   Table,
@@ -19,7 +18,7 @@ import {
   Menu,
   MenuItem,
 } from "@mui/material";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import AddIcon from "@mui/icons-material/Add";
 import ArrowDropDownIcon from "@mui/icons-material/ArrowDropDown";
@@ -30,7 +29,7 @@ import Gavel from "@mui/icons-material/Gavel";
 
 import PageHeader from "../../../shared/components/PageHeader";
 import { OrdenesTrabajoService } from "../../../services/ordenesTrabajo";
-import { me, type MeResponse } from "../../../services/auth";
+import { me } from "../../../services/auth";
 import LoaderOverlay from "../../../shared/components/LoaderOverlay";
 import { showError } from "../../../shared/utils/swal";
 import { usePermissions } from "../../../shared/hooks/usePermissions";
@@ -75,7 +74,6 @@ const SEVERIDAD_COLORS: Record<string, "error" | "warning" | "success" | "info">
 
 export default function DashboardPage() {
   const navigate = useNavigate();
-  const [user, setUser] = useState<MeResponse | null>(null);
   const [ots, setOts] = useState<OT[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
@@ -95,7 +93,6 @@ export default function DashboardPage() {
     setLoading(true);
     try {
       const userData = await me();
-      setUser(userData);
 
       if (!userData.authenticated) {
         navigate("/login");
@@ -229,7 +226,7 @@ export default function DashboardPage() {
       fondo: "linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)",
       icono: <Typography variant="h3">📊</Typography>,
     },
-  ].filter(Boolean) as { label: string; valor: number; color: string; fondo: string; icono: React.ReactNode }[];
+  ].filter(Boolean) as { label: string; valor: number; color: string; fondo: string; icono: ReactNode }[];
 
   if (loading && ots.length === 0) {
     return <LoaderOverlay label="Cargando Órdenes de Trabajo..." />;
