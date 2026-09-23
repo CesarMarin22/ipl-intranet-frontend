@@ -57,18 +57,18 @@ const SUCURSALES = [
   { value: "374", label: "PUE" },
 ];
 
-const SEVERIDADES = [
-  { value: "Menor", label: "Menor" },
-  { value: "Moderada", label: "Moderada" },
-  { value: "Critica", label: "Crítica" },
-  { value: "Fatal", label: "Fatal" },
-];
-
+// SEVERIDADES removed - will be loaded dynamically
 const CLASIFICACION_SUCESO = [
   { value: "24", label: "Seguridad" },
   { value: "28", label: "Operación" },
   { value: "27", label: "Vehículos" },
 ];
+
+type Severidad = {
+  code: string;
+  label: string;
+  color: string;
+};
 
 interface ImageFile {
   id: string;
@@ -122,6 +122,7 @@ export default function OTSeguridadPage() {
 
   const [clientes, setClientes] = useState<ClienteSAP[]>([]);
   const [tiposProblema, setTiposProblema] = useState<TipoProblemaSAP[]>([]);
+  const [severidades, setSeveridades] = useState<Severidad[]>([]);
 
   const [showClientes, setShowClientes] = useState(false);
 
@@ -264,6 +265,23 @@ export default function OTSeguridadPage() {
     searchClientes();
   }, [clienteSearch]);
 
+  // Cargar severidades según la clasificación del suceso
+  useEffect(() => {
+    const loadSeveridades = async () => {
+      try {
+        const callType = form.clasificacionSuceso || "24"; // Default: Seguridad
+        const opciones = await OrdenesTrabajoService.obtenerSeveridades(callType);
+        setSeveridades(opciones);
+        // Reset severidad cuando cambia clasificación
+        handleChange("severidad", "");
+      } catch (error) {
+        console.error("Error cargando severidades:", error);
+      }
+    };
+
+    loadSeveridades();
+  }, [form.clasificacionSuceso]);
+
   const validateForm = (): boolean => {
     const required = [
       "codigoCliente",
@@ -336,7 +354,15 @@ export default function OTSeguridadPage() {
 
       <Paper sx={{ p: 3, mt: 3, "@media print": { boxShadow: "none" } }}>
         <Box sx={{ display: "grid", gap: 2 }}>
-          {/* Sucursal */}
+          {/* 1. Usuario que elaboró Flash Report (readonly) */}
+          <TextField
+            label="Usuario que elaboró Flash Report"
+            value={user?.username || ""}
+            fullWidth
+            disabled
+          />
+
+          {/* 2. Sucursal */}
           <TextField
             select
             label="Sucursal"
@@ -353,9 +379,91 @@ export default function OTSeguridadPage() {
             ))}
           </TextField>
 
-          {/* Cliente */}
+          {/* 3. Clasificación del Suceso (BEFORE Severidad) */}
           <TextField
-            label="Código Cliente"
+            select
+            label="Clasificación del Suceso"
+            value={form.clasificacionSuceso}
+            onChange={(e) => handleChange("clasificacionSuceso", e.target.value)}
+            fullWidth
+          >
+            {CLASIFICACION_SUCESO.map((c) => (
+              <MenuItem key={c.value} value={c.value}>
+                {c.label}
+              </MenuItem>
+            ))}
+          </TextField>
+
+          {/* 4. Relación del Suceso (Tipo de Problema) */}
+          <TextField
+            select
+            label="Relación del Suceso"
+            value={form.tipoProblema}
+            onChange={(e) => handleChange("tipoProblema", e.target.value)}
+            fullWidth
+          >
+            {tiposProblema.map((t) => (
+              <MenuItem key={t.TipoProblem} value={t.TipoProblem}>
+                {t.Descripcion}
+              </MenuItem>
+            ))}
+          </TextField>
+
+          {/* 5 & 6. Fecha y Hora */}
+          <Grid container spacing={2}>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                label="Fecha"
+                type="date"
+                value={form.fechaInicio}
+                onChange={(e) => handleChange("fechaInicio", e.target.value)}
+                InputLabelProps={{ shrink: true }}
+                fullWidth
+                required
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                label="Hora"
+                type="time"
+                value={form.horaInicioTrabajo}
+                onChange={(e) => handleChange("horaInicioTrabajo", e.target.value)}
+                InputLabelProps={{ shrink: true }}
+                fullWidth
+                required
+              />
+            </Grid>
+          </Grid>
+
+          {/* 7. Severidad (AFTER Clasificación) */}
+          <TextField
+            select
+            label="Severidad"
+            value={form.severidad}
+            onChange={(e) => handleChange("severidad", e.target.value)}
+            fullWidth
+            required
+            disabled={severidades.length === 0}
+          >
+            {severidades.map((s) => (
+              <MenuItem key={s.code} value={s.code}>
+                {s.label}
+              </MenuItem>
+            ))}
+          </TextField>
+
+          {/* Nota de Acción Correctiva CAL */}
+          {showCALNote && (
+            <Alert severity="warning">
+              <Typography variant="body2">
+                <strong>Nota Importante:</strong> Debido al nivel de severidad se deberá llenar el formato <strong>CAL-FMT-15</strong>
+              </Typography>
+            </Alert>
+          )}
+
+          {/* 8. Lugar del Suceso (Código Cliente) */}
+          <TextField
+            label="Lugar del Suceso (Cliente)"
             value={form.codigoCliente}
             onChange={(e) => handleChange("codigoCliente", e.target.value.toUpperCase())}
             fullWidth
@@ -384,33 +492,26 @@ export default function OTSeguridadPage() {
             </Box>
           )}
 
-          {/* Fechas */}
-          <Grid container spacing={2}>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                label="Fecha Inicio"
-                type="date"
-                value={form.fechaInicio}
-                onChange={(e) => handleChange("fechaInicio", e.target.value)}
-                InputLabelProps={{ shrink: true }}
-                fullWidth
-                required
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                label="Hora Inicio"
-                type="time"
-                value={form.horaInicioTrabajo}
-                onChange={(e) => handleChange("horaInicioTrabajo", e.target.value)}
-                InputLabelProps={{ shrink: true }}
-                fullWidth
-                required
-              />
-            </Grid>
-          </Grid>
+          {/* 9. Nombre del Lugar del Suceso */}
+          <TextField
+            label="Nombre del Lugar del Suceso"
+            value={form.nombreCliente}
+            fullWidth
+            disabled
+          />
 
-          {/* Descripción del Suceso */}
+          {/* 10. Área del Suceso */}
+          <TextField
+            label="Área del Suceso"
+            value={form.areaTrabajo}
+            onChange={(e) => handleChange("areaTrabajo", e.target.value)}
+            multiline
+            rows={2}
+            fullWidth
+            required
+          />
+
+          {/* 11. Descripción del Suceso */}
           <TextField
             label="Descripción del Suceso"
             value={form.descripcionSuceso}
@@ -421,7 +522,7 @@ export default function OTSeguridadPage() {
             required
           />
 
-          {/* Posible Causa */}
+          {/* 12. Posible Causa */}
           <TextField
             label="Posible Causa"
             value={form.posibleCausa}
@@ -436,101 +537,9 @@ export default function OTSeguridadPage() {
             helperText={`${form.posibleCausa.length} / 254 caracteres`}
           />
 
-          {/* Severidad */}
+          {/* 13. Acciones realizadas para atender la situación */}
           <TextField
-            select
-            label="Severidad"
-            value={form.severidad}
-            onChange={(e) => handleChange("severidad", e.target.value)}
-            fullWidth
-            required
-          >
-            {SEVERIDADES.map((s) => (
-              <MenuItem key={s.value} value={s.value}>
-                {s.label}
-              </MenuItem>
-            ))}
-          </TextField>
-
-          {/* Relación del Suceso (Tipo de Problema) */}
-          <TextField
-            select
-            label="Relación del Suceso"
-            value={form.tipoProblema}
-            onChange={(e) => handleChange("tipoProblema", e.target.value)}
-            fullWidth
-          >
-            {tiposProblema.map((t) => (
-              <MenuItem key={t.TipoProblem} value={t.TipoProblem}>
-                {t.Descripcion}
-              </MenuItem>
-            ))}
-          </TextField>
-
-          {/* Nota de Acción Correctiva CAL */}
-          {showCALNote && (
-            <Alert severity="warning" sx={{ mt: 2 }}>
-              <Typography variant="body2">
-                <strong>Nota Importante:</strong> Debido al nivel de severidad se deberá llenar el formato <strong>CAL-FMT-15</strong>
-              </Typography>
-            </Alert>
-          )}
-
-          {/* Clasificación del Suceso */}
-          <TextField
-            select
-            label="Clasificación del Suceso"
-            value={form.clasificacionSuceso}
-            onChange={(e) => handleChange("clasificacionSuceso", e.target.value)}
-            fullWidth
-          >
-            {CLASIFICACION_SUCESO.map((c) => (
-              <MenuItem key={c.value} value={c.value}>
-                {c.label}
-              </MenuItem>
-            ))}
-          </TextField>
-
-          {/* Costo Aproximado */}
-          <TextField
-            label="Costo Aproximado ($)"
-            type="number"
-            value={form.costoAproximado}
-            onChange={(e) => handleChange("costoAproximado", e.target.value)}
-            fullWidth
-            inputProps={{ min: "0", step: "0.01" }}
-          />
-
-          {/* Persona Involucrada */}
-          <TextField
-            label="Persona Involucrada"
-            value={form.personaInvolucrada}
-            onChange={(e) => handleChange("personaInvolucrada", e.target.value)}
-            fullWidth
-          />
-
-          {/* Nombre del Supervisor */}
-          <TextField
-            label="Nombre del Supervisor"
-            value={form.nombreSupervisor}
-            onChange={(e) => handleChange("nombreSupervisor", e.target.value)}
-            fullWidth
-          />
-
-          {/* Área de trabajo */}
-          <TextField
-            label="Área de Trabajo"
-            value={form.areaTrabajo}
-            onChange={(e) => handleChange("areaTrabajo", e.target.value)}
-            multiline
-            rows={2}
-            fullWidth
-            required
-          />
-
-          {/* Acciones para la situación */}
-          <TextField
-            label="Acciones para la Situación"
+            label="Acciones realizadas para atender la situación"
             value={form.accionesSituacion}
             onChange={(e) => handleChange("accionesSituacion", e.target.value)}
             multiline
@@ -538,9 +547,9 @@ export default function OTSeguridadPage() {
             fullWidth
           />
 
-          {/* Plan de acción */}
+          {/* 14. Plan de acción */}
           <TextField
-            label="Plan de Acción"
+            label="Plan de acción"
             value={form.planAccion}
             onChange={(e) => handleChange("planAccion", e.target.value)}
             multiline
@@ -548,13 +557,39 @@ export default function OTSeguridadPage() {
             fullWidth
           />
 
-          {/* Lecciones aprendidas */}
+          {/* 15. Lecciones aprendidas */}
           <TextField
-            label="Lecciones Aprendidas"
+            label="Lecciones aprendidas"
             value={form.leccionesAprendidas}
             onChange={(e) => handleChange("leccionesAprendidas", e.target.value)}
             multiline
             rows={2}
+            fullWidth
+          />
+
+          {/* 16. Costo aproximado */}
+          <TextField
+            label="Costo aproximado"
+            type="number"
+            value={form.costoAproximado}
+            onChange={(e) => handleChange("costoAproximado", e.target.value)}
+            fullWidth
+            inputProps={{ min: "0", step: "0.01" }}
+          />
+
+          {/* 17. Persona Involucrada */}
+          <TextField
+            label="Persona Involucrada"
+            value={form.personaInvolucrada}
+            onChange={(e) => handleChange("personaInvolucrada", e.target.value)}
+            fullWidth
+          />
+
+          {/* 18. Nombre del Supervisor */}
+          <TextField
+            label="Nombre del Supervisor"
+            value={form.nombreSupervisor}
+            onChange={(e) => handleChange("nombreSupervisor", e.target.value)}
             fullWidth
           />
 

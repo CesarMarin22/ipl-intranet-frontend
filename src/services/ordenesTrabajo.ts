@@ -122,6 +122,14 @@ export const OrdenesTrabajoService = {
     return res.data.data?.value || [];
   },
 
+  obtenerSeveridades: async (callType: string = "24") => {
+    const res = await api.get<ApiResponse<any>>(
+      "/ordenes-trabajo/severidades",
+      { params: { call_type: callType } }
+    );
+    return res.data.data?.opciones || [];
+  },
+
   guardarCsv: async (payload: GuardarCSVPayload) => {
     const res = await api.post<ApiResponse<any>>(
       "/ordenes-trabajo/guardar-csv",
