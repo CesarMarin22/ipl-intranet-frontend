@@ -480,15 +480,15 @@ export default function DetallesOTPage() {
           ))}
         </Box>
 
-        {esFlash && puedeSeguimiento && (
+        {esFlash && (
           <Button
-            variant="contained"
+            variant={puedeSeguimiento ? "contained" : "outlined"}
             color="warning"
             startIcon={<TaskAltIcon />}
             onClick={() => navigate(`/ordenes-trabajo/seguridad/${ot.DocNum}/seguimiento`)}
             sx={{ mt: 2.5, fontWeight: 800 }}
           >
-            Dar seguimiento / Cerrar
+            {puedeSeguimiento ? "Dar seguimiento / Cerrar" : "Ver seguimiento"}
           </Button>
         )}
       </Paper>
