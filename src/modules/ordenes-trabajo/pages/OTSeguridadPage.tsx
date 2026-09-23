@@ -34,6 +34,7 @@ import {
 import {
   showError,
   showSuccess,
+  showWarning,
 } from "../../../shared/utils/swal";
 
 import {
@@ -326,6 +327,11 @@ export default function OTSeguridadPage() {
       return false;
     }
 
+    if (images.length === 0) {
+      showWarning("Debes adjuntar al menos una foto del suceso antes de guardar.", "Falta adjuntar fotos");
+      return false;
+    }
+
     return true;
   };
 
@@ -367,12 +373,23 @@ export default function OTSeguridadPage() {
 
       await OrdenesTrabajoService.guardarCsv(payload);
 
-      showSuccess(
-        "Guardado exitoso",
-        "El Flash Report se guardó correctamente."
-      );
+      const formDataImagenes = new FormData();
+      formDataImagenes.append("flashRefId", flashRefId);
+      images.forEach((img) => formDataImagenes.append("imagenes", img.file));
+
+      try {
+        await OrdenesTrabajoService.subirImagenesFlash(flashRefId, formDataImagenes);
+        showSuccess("El Flash Report y sus fotos se guardaron correctamente.", "Guardado exitoso");
+      } catch (error) {
+        console.error("Error al subir imágenes a Drive:", error);
+        showWarning(
+          "El Flash Report se guardó, pero las fotos no se subieron. Intenta adjuntarlas de nuevo.",
+          "No se pudieron subir las fotos"
+        );
+      }
 
       setForm(initialState);
+      setClienteInputValue("");
       setImages([]);
     } catch (error: any) {
       showError("Error", error.message || "No se pudo guardar el Flash Report.");
