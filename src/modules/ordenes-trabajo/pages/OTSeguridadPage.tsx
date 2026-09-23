@@ -445,9 +445,9 @@ export default function OTSeguridadPage() {
             required
             disabled={severidades.length === 0}
           >
-            {severidades.map((s) => (
-              <MenuItem key={s.code} value={s.code}>
-                {s.label}
+            {severidades.map((s: any) => (
+              <MenuItem key={s.value} value={s.value} sx={{backgroundColor: s.color, color: s.textColor}}>
+                {s.text}
               </MenuItem>
             ))}
           </TextField>
