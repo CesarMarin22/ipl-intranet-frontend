@@ -133,7 +133,8 @@ export default function OTSeguridadPage() {
   const [showClientes, setShowClientes] = useState(false);
 
   const [loadingClientes, setLoadingClientes] = useState(false);
-  const [saving, setSaving] = useState(false);
+  const [savingStep, setSavingStep] = useState<string | null>(null);
+  const saving = savingStep !== null;
   const [loading, setLoading] = useState(true);
 
   // Image upload states
@@ -338,12 +339,29 @@ export default function OTSeguridadPage() {
   const handleGuardar = async () => {
     if (!validateForm()) return;
 
-    try {
-      setSaving(true);
+    // Generate flashRefId like OTA does (timestamp + 2 random digits)
+    const rand2 = Math.floor(Math.random() * 90 + 10);
+    const flashRefId = String(Date.now()) + rand2;
 
-      // Generate flashRefId like OTA does (timestamp + 2 random digits)
-      const rand2 = Math.floor(Math.random() * 90 + 10);
-      const flashRefId = String(Date.now()) + rand2;
+    // Photos go to Drive first; the CSV is only created if the upload succeeds
+    try {
+      setSavingStep(`Subiendo ${images.length} foto(s) a Google Drive...`);
+      const formDataImagenes = new FormData();
+      formDataImagenes.append("flashRefId", flashRefId);
+      images.forEach((img) => formDataImagenes.append("imagenes", img.file));
+      await OrdenesTrabajoService.subirImagenesFlash(flashRefId, formDataImagenes);
+    } catch (error: any) {
+      console.error("Error al subir imágenes a Drive:", error);
+      setSavingStep(null);
+      showError(
+        `No se pudieron subir las fotos a Google Drive, el Flash Report NO se guardó. Intenta de nuevo.\n${error.message || ""}`,
+        "Error al subir fotos"
+      );
+      return;
+    }
+
+    try {
+      setSavingStep("Guardando Flash Report...");
 
       // Build payload EXACTLY as OTA sends it
       const payload = {
@@ -373,28 +391,17 @@ export default function OTSeguridadPage() {
 
       await OrdenesTrabajoService.guardarCsv(payload);
 
-      const formDataImagenes = new FormData();
-      formDataImagenes.append("flashRefId", flashRefId);
-      images.forEach((img) => formDataImagenes.append("imagenes", img.file));
-
-      try {
-        await OrdenesTrabajoService.subirImagenesFlash(flashRefId, formDataImagenes);
-        showSuccess("El Flash Report y sus fotos se guardaron correctamente.", "Guardado exitoso");
-      } catch (error) {
-        console.error("Error al subir imágenes a Drive:", error);
-        showWarning(
-          "El Flash Report se guardó, pero las fotos no se subieron. Intenta adjuntarlas de nuevo.",
-          "No se pudieron subir las fotos"
-        );
-      }
-
+      setSavingStep(null);
+      showSuccess("El Flash Report y sus fotos se guardaron correctamente.", "Guardado exitoso");
       setForm(initialState);
       setClienteInputValue("");
       setImages([]);
     } catch (error: any) {
-      showError("Error", error.message || "No se pudo guardar el Flash Report.");
-    } finally {
-      setSaving(false);
+      setSavingStep(null);
+      showError(
+        `Las fotos ya se subieron, pero no se pudo guardar el Flash Report.\n${error.message || ""}`,
+        "Error al guardar"
+      );
     }
   };
 
@@ -406,6 +413,7 @@ export default function OTSeguridadPage() {
 
   return (
     <Box sx={{ "@media print": { "& .no-print": { display: "none" } } }}>
+      {savingStep && <LoaderOverlay label={savingStep} />}
       <PageHeader title="Crear Flash Report (OT Seguridad)" />
 
       <Paper sx={{ p: 3, mt: 3, "@media print": { boxShadow: "none" } }}>
