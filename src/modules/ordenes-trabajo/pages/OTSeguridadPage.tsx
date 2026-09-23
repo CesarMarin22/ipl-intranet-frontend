@@ -318,16 +318,33 @@ export default function OTSeguridadPage() {
     try {
       setSaving(true);
 
+      // Generate flashRefId like OTA does (timestamp + 2 random digits)
+      const rand2 = Math.floor(Math.random() * 90 + 10);
+      const flashRefId = String(Date.now()) + rand2;
+
+      // Build payload EXACTLY as OTA sends it
       const payload = {
-        ...form,
-        fechaInicio: formatDateForSAP(form.fechaInicio),
-        "data-tipo": "seguridad",
+        // Form fields - using exact names from OTA
+        serie: form.serie,
+        tipoOrden: form.clasificacionSuceso,
+        tipoProblema: form.tipoProblema,
+        fechaInicio: form.fechaInicio, // OTA sends as dd/mm
+        horaInicioTrabajo: form.horaInicioTrabajo,
         U_Severidad: form.severidad,
-        U_ClasificacionSuceso: form.clasificacionSuceso,
-        U_CostoAproximado: form.costoAproximado,
-        U_PersonaInvolucrada: form.personaInvolucrada,
-        U_NombreSupervisor: form.nombreSupervisor,
-        U_PosibleCausa: form.posibleCausa,
+        codigoCliente: form.codigoCliente,
+        nombreCliente: form.nombreCliente,
+        areaTrabajo: form.areaTrabajo,
+        trabajoRealizado: form.descripcionSuceso,
+        descripcionFalla: form.posibleCausa,
+        accionesSituacion: form.accionesSituacion,
+        planAccion: form.planAccion,
+        leccionesAprendidas: form.leccionesAprendidas,
+        costoAproximado: form.costoAproximado || "0",
+        personaReporta: form.personaInvolucrada,
+        vistoBuenoCliente: form.nombreSupervisor,
+        // Meta fields
+        "data-tipo": "seguridad",
+        flashRefId: flashRefId,
         imagenes: images.length,
       };
 
