@@ -713,8 +713,8 @@ export default function OTAudiPage() {
 
     if (faltantes.length > 0) {
       showWarning(
-        "Campos incompletos",
         `Faltan los siguientes campos:\n\n${faltantes.join(", ")}`,
+        "Campos incompletos",
       );
       return false;
     }
@@ -726,7 +726,7 @@ export default function OTAudiPage() {
       );
 
       if (singleDateError) {
-        showWarning("Fecha inválida", singleDateError);
+        showWarning(singleDateError, "Fecha inválida");
         return false;
       }
     }
@@ -740,7 +740,7 @@ export default function OTAudiPage() {
       );
 
       if (dateError) {
-        showWarning("Fechas inválidas", dateError);
+        showWarning(dateError, "Fechas inválidas");
         return false;
       }
     }
@@ -749,8 +749,8 @@ export default function OTAudiPage() {
 
     if (Number.isNaN(roleId) || roleId !== -2) {
       showWarning(
-        "Rol inválido",
         "El empleado seleccionado en 'Realizó Trabajo' no tiene el rol TÉCNICO.",
+        "Rol inválido",
       );
       return false;
     }
@@ -760,12 +760,12 @@ export default function OTAudiPage() {
       const horas = Number(form.horasTrabajadas);
 
       if (Number.isNaN(numPersonas) || numPersonas <= 0) {
-        showWarning("Dato inválido", "Número de personas debe ser mayor a 0.");
+        showWarning("Número de personas debe ser mayor a 0.", "Dato inválido");
         return false;
       }
 
       if (Number.isNaN(horas) || horas <= 0) {
-        showWarning("Dato inválido", "Horas trabajadas debe ser mayor a 0.");
+        showWarning("Horas trabajadas debe ser mayor a 0.", "Dato inválido");
         return false;
       }
 
@@ -788,8 +788,8 @@ export default function OTAudiPage() {
           .join(", ");
 
         showWarning(
-          "Refacciones incompletas",
           `Las siguientes refacciones tienen datos incompletos:\n\n${filas}\n\nDebes capturar cantidad y número de parte.`,
+          "Refacciones incompletas",
         );
         return false;
       }
@@ -847,11 +847,11 @@ export default function OTAudiPage() {
 
       await OrdenesTrabajoService.guardarCsv(payload);
 
-      showSuccess("Guardado exitoso", "La OT Audi se guardó correctamente.");
+      showSuccess("La OT Audi se guardó correctamente.", "Guardado exitoso");
       setForm(initialState);
       setRefacciones(emptyRefacciones);
     } catch (error: any) {
-      showError("Error", error.message || "No se pudo guardar la OT Audi.");
+      showError(error.message || "No se pudo guardar la OT Audi.", "Error");
     } finally {
       setSaving(false);
     }

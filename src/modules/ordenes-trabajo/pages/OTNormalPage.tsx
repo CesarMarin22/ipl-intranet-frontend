@@ -681,33 +681,6 @@ export default function OTNormalPage() {
     setShowCssrs(false);
   };
 
-  const refaccionesCapturadas = refacciones
-    .map((ref, index) => ({
-      ...ref,
-      index,
-    }))
-    .filter(
-      (ref) =>
-        ref.cantidad.trim() || ref.numeroParte.trim() || ref.descripcion.trim(),
-    );
-
-  const refaccionesIncompletas = refaccionesCapturadas.filter(
-    (ref) => !ref.cantidad.trim() || !ref.numeroParte.trim(),
-  );
-
-  if (refaccionesIncompletas.length > 0) {
-    const filas = refaccionesIncompletas
-      .map((ref) => `Refacción ${ref.index + 1}`)
-      .join(", ");
-
-    showWarning(
-      "Refacciones incompletas",
-      `Las siguientes refacciones tienen datos incompletos:\n\n${filas}\n\nDebes capturar cantidad y número de parte.`,
-    );
-
-    return false;
-  }
-
   // Live check once start and end are captured, so the mistake is visible before saving
   const errorRangoFechas =
     form.fechaInicio && form.horaInicioTrabajo && form.fechaTermino && form.horaSalida
@@ -723,8 +696,8 @@ export default function OTNormalPage() {
 
     if (faltantes.length > 0) {
       showWarning(
-        "Campos incompletos",
         `Faltan los siguientes campos:\n\n${faltantes.join(", ")}`,
+        "Campos incompletos",
       );
       return false;
     }
@@ -737,7 +710,21 @@ export default function OTNormalPage() {
     );
 
     if (dateError) {
-      showWarning("Fechas inválidas", dateError);
+      showWarning(dateError, "Fechas inválidas");
+      return false;
+    }
+
+    const refaccionesIncompletas = refacciones
+      .map((ref, index) => ({ ...ref, index }))
+      .filter((ref) => ref.cantidad.trim() || ref.numeroParte.trim() || ref.descripcion.trim())
+      .filter((ref) => !ref.cantidad.trim() || !ref.numeroParte.trim());
+
+    if (refaccionesIncompletas.length > 0) {
+      const filas = refaccionesIncompletas.map((ref) => `Refacción ${ref.index + 1}`).join(", ");
+      showWarning(
+        `Las siguientes refacciones tienen datos incompletos: ${filas}. Debes capturar cantidad y número de parte.`,
+        "Refacciones incompletas",
+      );
       return false;
     }
 
@@ -745,8 +732,8 @@ export default function OTNormalPage() {
 
     if (Number.isNaN(roleId) || roleId !== -2) {
       showWarning(
-        "Rol inválido",
         "El empleado seleccionado en 'Realizó Trabajo' no tiene el rol TÉCNICO.",
+        "Rol inválido",
       );
       return false;
     }
@@ -781,8 +768,8 @@ export default function OTNormalPage() {
       await OrdenesTrabajoService.guardarCsv(payload);
 
       showSuccess(
-        "Guardado exitoso",
         "La orden de trabajo se guardó correctamente.",
+        "Guardado exitoso",
       );
 
       setForm(initialState);
@@ -795,7 +782,7 @@ export default function OTNormalPage() {
       setRevisoSeleccionado(false);
       setCssrSeleccionado(false);
     } catch (error: any) {
-      showError("Error", error.message || "No se pudo guardar la OT.");
+      showError(error.message || "No se pudo guardar la OT.", "Error");
     } finally {
       setSaving(false);
     }
