@@ -17,6 +17,7 @@ import {
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 
 import PageHeader from "../../../shared/components/PageHeader";
+import CampoFecha from "../../../shared/components/CampoFecha";
 import { useDebouncedValue } from "../../../shared/hooks/useDebouncedValue";
 import {
   formatDateForSAP,
@@ -707,6 +708,12 @@ export default function OTNormalPage() {
     return false;
   }
 
+  // Live check once start and end are captured, so the mistake is visible before saving
+  const errorRangoFechas =
+    form.fechaInicio && form.horaInicioTrabajo && form.fechaTermino && form.horaSalida
+      ? validateDateTimeRange(form.fechaInicio, form.horaInicioTrabajo, form.fechaTermino, form.horaSalida)
+      : null;
+
   const validateForm = () => {
     const faltantes = requiredFields
       .filter(
@@ -865,13 +872,7 @@ export default function OTNormalPage() {
         </FieldRow>
 
         <FieldRow label="Fecha Inicio">
-          <TextField
-            fullWidth
-            type="date"
-            InputLabelProps={{ shrink: true }}
-            value={form.fechaInicio}
-            onChange={(e) => handleChange("fechaInicio", e.target.value)}
-          />
+          <CampoFecha value={form.fechaInicio} onChange={(iso) => handleChange("fechaInicio", iso)} />
         </FieldRow>
 
         <FieldRow label="Hora Inicio Trabajo">
@@ -1281,12 +1282,10 @@ export default function OTNormalPage() {
         </Paper>
 
         <FieldRow label="Fecha de Término">
-          <TextField
-            fullWidth
-            type="date"
-            InputLabelProps={{ shrink: true }}
+          <CampoFecha
             value={form.fechaTermino}
-            onChange={(e) => handleChange("fechaTermino", e.target.value)}
+            onChange={(iso) => handleChange("fechaTermino", iso)}
+            error={errorRangoFechas}
           />
         </FieldRow>
 
@@ -1297,6 +1296,7 @@ export default function OTNormalPage() {
             InputLabelProps={{ shrink: true }}
             value={form.horaSalida}
             onChange={(e) => handleChange("horaSalida", e.target.value)}
+            error={Boolean(errorRangoFechas)}
           />
         </FieldRow>
 

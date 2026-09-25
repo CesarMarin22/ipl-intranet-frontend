@@ -25,6 +25,8 @@ import CloseIcon from "@mui/icons-material/Close";
 
 import PageHeader from "../../../shared/components/PageHeader";
 import { useDebouncedValue } from "../../../shared/hooks/useDebouncedValue";
+import CampoFecha from "../../../shared/components/CampoFecha";
+import { formatDateForSAP, validateSingleDateTime } from "../../../shared/utils/dateUtils";
 import {
   showError,
   showSuccess,
@@ -342,6 +344,12 @@ export default function OTSeguridadPage() {
       return false;
     }
 
+    const errorFecha = validateSingleDateTime(form.fechaInicio, form.horaInicioTrabajo);
+    if (errorFecha) {
+      showWarning(errorFecha, "Fecha inválida");
+      return false;
+    }
+
     if (form.posibleCausa.length > 254) {
       showWarning("La Posible Causa no puede exceder 254 caracteres.", "Validación");
       return false;
@@ -383,7 +391,7 @@ export default function OTSeguridadPage() {
         serie: form.serie,
         tipoOrden: form.clasificacionSuceso,
         tipoProblema: form.tipoProblema,
-        fechaInicio: form.fechaInicio, // OTA sends as dd/mm
+        fechaInicio: formatDateForSAP(form.fechaInicio),
         horaInicioTrabajo: form.horaInicioTrabajo,
         U_Severidad: form.severidad,
         codigoCliente: form.codigoCliente,
@@ -425,6 +433,8 @@ export default function OTSeguridadPage() {
     return <LoaderOverlay label="Cargando Flash Reports..." />;
   }
 
+  const errorFechaHora =
+    form.fechaInicio && form.horaInicioTrabajo ? validateSingleDateTime(form.fechaInicio, form.horaInicioTrabajo) : null;
   const sucursalFija = Boolean(user && ![1, 4].includes(user.perfil || 0));
   const calLink = getCalFmt15Link(form.clasificacionSuceso || "24", form.severidad);
 
@@ -493,14 +503,11 @@ export default function OTSeguridadPage() {
           {/* 5 & 6. Fecha y Hora */}
           <Grid container spacing={2}>
             <Grid size={{ xs: 12, sm: 6 }}>
-              <TextField
+              <CampoFecha
                 label="Fecha"
-                type="date"
-                value={form.fechaInicio}
-                onChange={(e) => handleChange("fechaInicio", e.target.value)}
-                InputLabelProps={{ shrink: true }}
-                fullWidth
                 required
+                value={form.fechaInicio}
+                onChange={(iso) => handleChange("fechaInicio", iso)}
               />
             </Grid>
             <Grid size={{ xs: 12, sm: 6 }}>
@@ -512,6 +519,8 @@ export default function OTSeguridadPage() {
                 InputLabelProps={{ shrink: true }}
                 fullWidth
                 required
+                error={Boolean(errorFechaHora)}
+                helperText={errorFechaHora || " "}
               />
             </Grid>
           </Grid>

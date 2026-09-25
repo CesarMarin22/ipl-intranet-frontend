@@ -18,10 +18,12 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 
 import PageHeader from "../../../shared/components/PageHeader";
 import LoaderOverlay from "../../../shared/components/LoaderOverlay";
+import CampoFecha from "../../../shared/components/CampoFecha";
 import { useDebouncedValue } from "../../../shared/hooks/useDebouncedValue";
 import {
   formatDateForSAP,
   validateDateTimeRange,
+  validateSingleDateTime,
 } from "../../../shared/utils/dateUtils";
 import {
   showError,
@@ -189,24 +191,6 @@ function normalizeTextarea(value: string) {
     .trimStart();
 }
 
-function validateSingleDateTime(fecha: string, hora: string) {
-  if (!fecha || !hora) return "Debes capturar fecha y hora.";
-
-  const fechaHora = new Date(`${fecha}T${hora}`);
-
-  if (Number.isNaN(fechaHora.getTime())) {
-    return "La fecha u hora no tiene un formato válido.";
-  }
-
-  const year = fechaHora.getFullYear();
-
-  if (year < 2020 || year > 2100) {
-    return "El año de la fecha no es válido.";
-  }
-
-  return null;
-}
-
 function FieldRow({ label, children }: { label: string; children: ReactNode }) {
   return (
     <Box
@@ -279,6 +263,16 @@ export default function OTAudiPage() {
 
   const isIngreso = form.tipoCapturaAudi === "INGRESO";
   const isReporte = form.tipoCapturaAudi === "REPORTE";
+
+  // Live checks so wrong dates are visible before saving
+  const errorFechaIngreso =
+    form.fechaInicio && form.horaInicioTrabajo
+      ? validateSingleDateTime(form.fechaInicio, form.horaInicioTrabajo)
+      : null;
+  const errorRangoFechas =
+    form.fechaInicio && form.horaInicioTrabajo && form.fechaTermino && form.horaSalida
+      ? validateDateTimeRange(form.fechaInicio, form.horaInicioTrabajo, form.fechaTermino, form.horaSalida)
+      : null;
 
   const audiOptions = useMemo(
     () => getAudiOptionsByDefecto(form.tipoProblema),
@@ -968,12 +962,10 @@ export default function OTAudiPage() {
                   : "Fecha de inicio de trabajo"
               }
             >
-              <TextField
-                fullWidth
-                type="date"
-                InputLabelProps={{ shrink: true }}
+              <CampoFecha
                 value={form.fechaInicio}
-                onChange={(e) => handleChange("fechaInicio", e.target.value)}
+                onChange={(iso) => handleChange("fechaInicio", iso)}
+                error={isIngreso ? errorFechaIngreso : null}
               />
             </FieldRow>
 
@@ -1430,14 +1422,10 @@ export default function OTAudiPage() {
                 </FieldRow>
 
                 <FieldRow label="Fecha de término de trabajo">
-                  <TextField
-                    fullWidth
-                    type="date"
-                    InputLabelProps={{ shrink: true }}
+                  <CampoFecha
                     value={form.fechaTermino}
-                    onChange={(e) =>
-                      handleChange("fechaTermino", e.target.value)
-                    }
+                    onChange={(iso) => handleChange("fechaTermino", iso)}
+                    error={errorRangoFechas}
                   />
                 </FieldRow>
 
@@ -1448,6 +1436,7 @@ export default function OTAudiPage() {
                     InputLabelProps={{ shrink: true }}
                     value={form.horaSalida}
                     onChange={(e) => handleChange("horaSalida", e.target.value)}
+                    error={Boolean(errorRangoFechas)}
                   />
                 </FieldRow>
               </>
