@@ -420,7 +420,7 @@ export default function AppRoutes({
         <Route
           path="/ordenes-trabajo/:docnum"
           element={
-            <ProtectedModuleRoute moduleName={["VER_OT", "OT_SEGURIDAD"]} actionName="VER">
+            <ProtectedModuleRoute moduleName={["VER_OT", "OT_SEGURIDAD", "OT_NORMAL", "OT_AUDI"]} actionName="VER">
               <DetallesOTPage />
             </ProtectedModuleRoute>
           }
