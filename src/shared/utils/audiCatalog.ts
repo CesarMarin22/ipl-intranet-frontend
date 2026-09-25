@@ -12,7 +12,7 @@ export const AUDI_TIPOS_ORDEN = [
   { value: "ZPM8", label: "AJUSTES", callType: "2" },
 ];
 
-export const AUDI_TIPOS_PROBLEMA_PERMITIDOS = ["2", "7", "8", "11", "198"];
+export const AUDI_TIPOS_PROBLEMA_PERMITIDOS = ["2", "7", "8", "11", "198", "197"];
 
 export const AUDI_DEFECTOS_PREFIJOS: Record<string, string[]> = {
   "2": ["EL:"],
@@ -20,6 +20,7 @@ export const AUDI_DEFECTOS_PREFIJOS: Record<string, string[]> = {
   "8": ["M:"],
   "198": ["E:"],
   "11": ["O:"],
+  "197": ["P:"],
 };
 
 export const AUDI_CAUSAS = [
@@ -82,6 +83,9 @@ export const AUDI_CAUSAS = [
   { code: "O:CINTURON DE SEGURIDAD", name: "CINTURON DE SEGURIDAD" },
   { code: "O:ESPEJO", name: "ESPEJO" },
   { code: "O:PAREMETROS", name: "PAREMETROS" },
+
+  { code: "P:PREVENTIVO MAYOR", name: "PREVENTIVO MAYOR" },
+  { code: "P:PREVENTIVO MENOR", name: "PREVENTIVO MENOR" },
 ];
 
 export const AUDI_TIPOS_DANIO = [
@@ -108,6 +112,9 @@ export const AUDI_TIPOS_DANIO = [
   { code: "O:DESGASTE NATURAL", name: "DESGASTE NATURAL O" },
   { code: "O:FRACTURA", name: "FRACTURA O" },
   { code: "O:GOLPE", name: "GOLPE" },
+
+  { code: "P:PREVENTIVO MAYOR", name: "PREVENTIVO MAYOR" },
+  { code: "P:PREVENTIVO MENOR", name: "PREVENTIVO MENOR" },
 ];
 
 export function getAudiOptionsByDefecto(defectoId: string) {
