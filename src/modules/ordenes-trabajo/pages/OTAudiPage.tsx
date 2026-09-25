@@ -836,11 +836,8 @@ export default function OTAudiPage() {
         nombreCssr: form.nombreCssr,
         vistoBuenoCliente: AUDI_CLIENTE.vistoBuenoCliente,
 
-        refacciones: isIngreso
-          ? []
-          : refacciones.filter(
-              (r) => r.cantidad || r.numeroParte || r.descripcion,
-            ),
+        // All 20 rows keep their position: rows 11-20 are "Requeridas" and map to U_Code11-20
+        refacciones: isIngreso ? [] : refacciones,
 
         "data-tipo": "audi",
       };

@@ -75,15 +75,22 @@ const tipoRefacciones = (v: unknown) =>
 const moneda = (v: unknown) =>
   Number(v || 0).toLocaleString("es-MX", { style: "currency", currency: "MXN" });
 
-function duracion(inicio: string, fin: string) {
-  const [h1, m1] = inicio.split(":").map(Number);
-  const [h2, m2] = fin.split(":").map(Number);
-  if ([h1, m1, h2, m2].some(Number.isNaN)) return "";
-  const minutos = h2 * 60 + m2 - (h1 * 60 + m1);
+// Dates come as "2026-04-18T00:00:00Z" (the day) and the hour in a separate field
+function duracion(fechaInicio: unknown, horaInicio: string, fechaFin: unknown, horaFin: string) {
+  const momento = (fecha: unknown, hora: string) => {
+    const dia = texto(fecha).slice(0, 10);
+    return /^\d{4}-\d{2}-\d{2}$/.test(dia) && /^\d{2}:\d{2}$/.test(hora) ? new Date(`${dia}T${hora}`) : null;
+  };
+  const inicio = momento(fechaInicio, horaInicio);
+  const fin = momento(fechaFin, horaFin);
+  if (!inicio || !fin) return "";
+
+  const minutos = Math.round((fin.getTime() - inicio.getTime()) / 60000);
   if (minutos <= 0) return "";
-  const h = Math.floor(minutos / 60);
+  const d = Math.floor(minutos / 1440);
+  const h = Math.floor((minutos % 1440) / 60);
   const m = minutos % 60;
-  return h ? `${h} h ${m ? `${m} min` : ""}`.trim() : `${m} min`;
+  return [d && `${d} d`, h && `${h} h`, m && `${m} min`].filter(Boolean).join(" ");
 }
 
 // ---------- building blocks ----------
@@ -209,7 +216,7 @@ function Narrativa({ items, accent }: { items: { label: string; value: string }[
 function Tiempos({ ot, accent, extra }: { ot: OT; accent: string; extra?: ReactNode }) {
   const inicio = hora(ot.U_HoraInicio || ot.StartTime);
   const fin = hora(ot.U_HoraFin || ot.EndTime);
-  const dur = inicio && fin ? duracion(inicio, fin) : "";
+  const dur = duracion(ot.StartDate, inicio, ot.EndDueDate, fin);
   const Punto = ({ titulo, f, h }: { titulo: string; f: string; h: string }) => (
     <Box sx={{ textAlign: "center", minWidth: 110 }}>
       <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700, textTransform: "uppercase" }}>
@@ -258,6 +265,7 @@ function Refacciones({ ot }: { ot: OT }) {
             <TableHead>
               <TableRow>
                 <TableCell sx={{ fontWeight: 800 }}>#</TableCell>
+                <TableCell sx={{ fontWeight: 800 }}>Tipo</TableCell>
                 <TableCell sx={{ fontWeight: 800 }}>Número de parte</TableCell>
                 <TableCell sx={{ fontWeight: 800 }} align="right">
                   Cantidad
@@ -268,6 +276,10 @@ function Refacciones({ ot }: { ot: OT }) {
               {filas.map((f) => (
                 <TableRow key={f.n} hover>
                   <TableCell>{f.n}</TableCell>
+                  <TableCell>
+                    {/* Slots 1-10 hold installed parts and 11-20 required ones (same layout as the CSV) */}
+                    <Chip size="small" variant="outlined" label={f.n <= 10 ? "Instalada" : "Requerida"} color={f.n <= 10 ? "success" : "warning"} />
+                  </TableCell>
                   <TableCell>{f.codigo}</TableCell>
                   <TableCell align="right">{Number(f.cantidad || 0)}</TableCell>
                 </TableRow>

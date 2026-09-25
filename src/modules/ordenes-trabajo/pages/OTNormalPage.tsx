@@ -758,9 +758,8 @@ export default function OTNormalPage() {
         tecnico4: form.tecnico4EmployeeID,
         revisoTrabajo: form.revisoTrabajoEmployeeID,
 
-        refacciones: refacciones.filter(
-          (r) => r.cantidad || r.numeroParte || r.descripcion,
-        ),
+        // All 20 rows keep their position: rows 11-20 are "Requeridas" and map to U_Code11-20
+        refacciones,
 
         "data-tipo": "ot",
       };
