@@ -19,8 +19,10 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 import PageHeader from "../../../shared/components/PageHeader";
 import LoaderOverlay from "../../../shared/components/LoaderOverlay";
 import CampoFecha from "../../../shared/components/CampoFecha";
+import { me } from "../../../services/auth";
 import { useDebouncedValue } from "../../../shared/hooks/useDebouncedValue";
 import {
+  diaMesDesdeIso,
   formatDateForSAP,
   validateDateTimeRange,
   validateSingleDateTime,
@@ -55,7 +57,7 @@ type FormState = {
   tipoCapturaAudi: string;
 
   folioEx: string;
-  U_A_Orden: string;
+  folio: string;
   ordenBase: string;
 
   fechaInicio: string;
@@ -110,11 +112,11 @@ type FormState = {
 };
 
 const initialState: FormState = {
-  tipoCapturaAudi: "",
+  tipoCapturaAudi: "INGRESO",
 
   folioEx: "",
-  U_A_Orden: "",
-  ordenBase: "",
+  folio: "",
+  ordenBase: "B",
 
   fechaInicio: "",
   horaInicioTrabajo: "",
@@ -191,6 +193,22 @@ function normalizeTextarea(value: string) {
     .trimStart();
 }
 
+const sinPrefijo = (codigo: string) => codigo.replace(/^[A-Z]+:/, "");
+
+// fechaInicio + horaInicio + horas trabajadas, like OTA's calcularTermino
+function calcularTermino(fechaIso: string, hora: string, horas: string) {
+  const cantidad = Number(horas);
+  if (!fechaIso || !/^\d{2}:\d{2}$/.test(hora) || !cantidad || cantidad <= 0) return null;
+  const inicio = new Date(`${fechaIso}T${hora}`);
+  if (Number.isNaN(inicio.getTime())) return null;
+  const fin = new Date(inicio.getTime() + cantidad * 60 * 60 * 1000);
+  const dos = (n: number) => String(n).padStart(2, "0");
+  return {
+    fecha: `${fin.getFullYear()}-${dos(fin.getMonth() + 1)}-${dos(fin.getDate())}`,
+    hora: `${dos(fin.getHours())}:${dos(fin.getMinutes())}`,
+  };
+}
+
 function FieldRow({ label, children }: { label: string; children: ReactNode }) {
   return (
     <Box
@@ -214,6 +232,7 @@ export default function OTAudiPage() {
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [usuarioCreacion, setUsuarioCreacion] = useState("");
 
   const [equipos, setEquipos] = useState<EquipoSAP[]>([]);
   const [empleadosRealizo, setEmpleadosRealizo] = useState<EmpleadoSAP[]>([]);
@@ -279,26 +298,35 @@ export default function OTAudiPage() {
     [form.tipoProblema],
   );
 
+  // End date/time are not typed: OTA derives them from start + hours worked
+  useEffect(() => {
+    if (!isReporte) return;
+    const termino = calcularTermino(form.fechaInicio, form.horaInicioTrabajo, form.horasTrabajadas);
+    setForm((prev) => ({ ...prev, fechaTermino: termino?.fecha || "", horaSalida: termino?.hora || "" }));
+  }, [isReporte, form.fechaInicio, form.horaInicioTrabajo, form.horasTrabajadas]);
+
   const requiredFields = useMemo(() => {
+    // Same as OTA: every visible field except Técnico 2/3, Revisó trabajo, Número económico, Modelo
+    // and Equipo en funcionamiento. Marca / Número de artículo force picking the equipment from the list.
     const base = [
-      { key: "tipoCapturaAudi", label: "Tipo de captura" },
       { key: "folioEx", label: "Número de aviso" },
       {
         key: "fechaInicio",
         label: isIngreso
-          ? "Fecha de llegada a taller"
+          ? "Fecha de llegada al taller"
           : "Fecha de inicio de trabajo",
       },
       {
         key: "horaInicioTrabajo",
         label: isIngreso
-          ? "Hora de llegada a taller"
+          ? "Hora de llegada al taller"
           : "Hora de inicio de trabajo",
       },
       { key: "tipoOrdenAudi", label: "Tipo de orden" },
       { key: "personaReporta", label: "Persona que reporta" },
-      { key: "equipoFuncionamiento", label: "Equipo en funcionamiento" },
       { key: "noSerie", label: "No. de serie" },
+      { key: "marca", label: "Marca (elige el equipo de la lista)" },
+      { key: "itemCode", label: "Número de artículo (elige el equipo de la lista)" },
       { key: "descripcionFalla", label: "Descripción de la falla" },
       { key: "trabajoRealizado", label: "Trabajo realizado" },
       { key: "realizoTrabajo", label: "Realizó trabajo" },
@@ -313,14 +341,12 @@ export default function OTAudiPage() {
     if (isReporte) {
       return [
         ...base,
-        { key: "U_A_Orden", label: "Folio físico" },
+        { key: "folio", label: "Folio físico" },
         { key: "tipoProblema", label: "Defecto" },
         { key: "causa", label: "Causa" },
         { key: "tipoDanio", label: "Tipo de daño" },
         { key: "NumPersonas", label: "Número de personas que trabajaron" },
         { key: "horasTrabajadas", label: "Horas trabajadas" },
-        { key: "fechaTermino", label: "Fecha de término de trabajo" },
-        { key: "horaSalida", label: "Hora de término de trabajo" },
       ];
     }
 
@@ -378,6 +404,9 @@ export default function OTAudiPage() {
 
   useEffect(() => {
     const init = async () => {
+      me()
+        .then((usuario) => setUsuarioCreacion(usuario.username || ""))
+        .catch(() => setUsuarioCreacion(""));
       try {
         const tipos = await OrdenesTrabajoService.tiposProblema();
 
@@ -401,7 +430,7 @@ export default function OTAudiPage() {
       setForm((prev) => ({
         ...prev,
         ordenBase: "B",
-        U_A_Orden: "",
+        folio: "",
         tipoProblema: "",
         causa: "",
         tipoDanio: "",
@@ -432,7 +461,7 @@ export default function OTAudiPage() {
 
       if (equipoSeleccionado) return;
 
-      if (value.length < 2) {
+      if (value.length < 1) {
         setEquipos([]);
         setShowEquipos(false);
         return;
@@ -463,7 +492,7 @@ export default function OTAudiPage() {
 
       if (realizoSeleccionado) return;
 
-      if (value.length < 2) {
+      if (value.length < 1) {
         setEmpleadosRealizo([]);
         setShowRealizo(false);
         return;
@@ -491,7 +520,7 @@ export default function OTAudiPage() {
 
       if (!isReporte || tec2Seleccionado) return;
 
-      if (value.length < 2) {
+      if (value.length < 1) {
         setEmpleadosTec2([]);
         setShowTec2(false);
         return;
@@ -519,7 +548,7 @@ export default function OTAudiPage() {
 
       if (!isReporte || tec3Seleccionado) return;
 
-      if (value.length < 2) {
+      if (value.length < 1) {
         setEmpleadosTec3([]);
         setShowTec3(false);
         return;
@@ -547,7 +576,7 @@ export default function OTAudiPage() {
 
       if (revisoSeleccionado) return;
 
-      if (value.length < 2) {
+      if (value.length < 1) {
         setEmpleadosReviso([]);
         setShowReviso(false);
         return;
@@ -573,7 +602,7 @@ export default function OTAudiPage() {
     const buscar = async () => {
       const value = itemSearch.trim();
 
-      if (!isReporte || activeRefIndex === null || value.length < 2) {
+      if (!isReporte || activeRefIndex === null || value.length < 1) {
         setItems([]);
         setShowItems(false);
         return;
@@ -607,7 +636,7 @@ export default function OTAudiPage() {
 
       if (cssrSeleccionado) return;
 
-      if (value.length < 2) {
+      if (value.length < 1) {
         setCssrs([]);
         setShowCssrs(false);
         return;
@@ -713,8 +742,8 @@ export default function OTAudiPage() {
 
     if (faltantes.length > 0) {
       showWarning(
-        `Faltan los siguientes campos:\n\n${faltantes.join(", ")}`,
-        "Campos incompletos",
+        `Por favor, completa los siguientes campos: ${faltantes.join(", ")}`,
+        "Campos incompletos en OT Audi",
       );
       return false;
     }
@@ -745,12 +774,12 @@ export default function OTAudiPage() {
       }
     }
 
-    const roleId = Number(form.realizoTrabajoRoleID);
-
-    if (Number.isNaN(roleId) || roleId !== -2) {
+    // OTA does not check the TÉCNICO role for Audi, but the employee must come from the list
+    // so TechnicianCode is filled
+    if (!form.realizoTrabajoEmployeeID) {
       showWarning(
-        "El empleado seleccionado en 'Realizó Trabajo' no tiene el rol TÉCNICO.",
-        "Rol inválido",
+        "Selecciona de la lista al empleado que realizó el trabajo.",
+        "Realizó trabajo",
       );
       return false;
     }
@@ -759,13 +788,13 @@ export default function OTAudiPage() {
       const numPersonas = Number(form.NumPersonas);
       const horas = Number(form.horasTrabajadas);
 
-      if (Number.isNaN(numPersonas) || numPersonas <= 0) {
-        showWarning("Número de personas debe ser mayor a 0.", "Dato inválido");
+      if (!Number.isInteger(numPersonas) || numPersonas <= 0) {
+        showWarning("El número de personas debe ser un número entero mayor a 0.", "Dato inválido");
         return false;
       }
 
-      if (Number.isNaN(horas) || horas <= 0) {
-        showWarning("Horas trabajadas debe ser mayor a 0.", "Dato inválido");
+      if (Number.isNaN(horas) || horas <= 0 || !Number.isInteger(horas * 2)) {
+        showWarning("Las horas trabajadas deben ser mayores a 0 y en múltiplos de media hora (0.5).", "Dato inválido");
         return false;
       }
 
@@ -807,7 +836,9 @@ export default function OTAudiPage() {
       const payload = {
         ...form,
 
-        folio: form.folioEx,
+        // Same columns OTA writes: CustomerRefNo = folio físico, U_A_Orden = ZPM code, U_A_FolioE = número de aviso
+        folio: isIngreso ? "" : form.folio,
+        U_A_Orden: form.tipoOrdenAudi,
 
         codigoCliente: AUDI_CLIENTE.codigoCliente,
         nombreCliente: AUDI_CLIENTE.nombreCliente,
@@ -820,15 +851,17 @@ export default function OTAudiPage() {
         horaSalida: isIngreso ? "" : form.horaSalida,
 
         tipoProblema: isIngreso ? "" : form.tipoProblema,
-        causa: isIngreso ? " " : form.causa,
-        tipoDanio: isIngreso ? " " : form.tipoDanio,
+        // SAP stores causa / tipo de daño without the catalog prefix ("E:FRENO" -> "FRENO"), as OTA did
+        causa: isIngreso ? "" : sinPrefijo(form.causa),
+        tipoDanio: isIngreso ? "" : sinPrefijo(form.tipoDanio),
 
         horometro: isIngreso ? form.horometro : "",
 
+        // TechnicianCode goes by realizoTrabajoEmployeeID; U_Tecnico2/3/4 hold the names, as in OTA
         realizoTrabajo: form.realizoTrabajoEmployeeID,
-        tecnico3: isIngreso ? "" : form.tecnico3EmployeeID,
-        tecnico4: isIngreso ? "" : form.tecnico4EmployeeID,
-        revisoTrabajo: form.revisoTrabajoEmployeeID,
+        tecnico3: isIngreso ? "" : form.tecnico3,
+        tecnico4: isIngreso ? "" : form.tecnico4,
+        revisoTrabajo: form.revisoTrabajo,
 
         NumPersonas: isIngreso ? "" : form.NumPersonas,
         horasTrabajadas: isIngreso ? "" : form.horasTrabajadas,
@@ -901,35 +934,29 @@ export default function OTAudiPage() {
       />
 
       <Paper sx={{ p: { xs: 2, md: 3 }, borderRadius: 3 }}>
-        <FieldRow label="Sucursal">
+        <FieldRow label="Usuario de creación de OT">
+          <TextField fullWidth value={usuarioCreacion} InputProps={{ readOnly: true }} />
+        </FieldRow>
+        <FieldRow label="Serie">
           <TextField
             fullWidth
             value={`${AUDI_CLIENTE.serieNombre}`}
             InputProps={{ readOnly: true }}
           />
         </FieldRow>
-        <FieldRow label="Tipo de captura">
-          <TextField
-            select
-            fullWidth
+        <FieldRow label="¿Qué tipo de orden es?">
+          <RadioGroup
+            row
             value={form.tipoCapturaAudi}
             onChange={(e) => {
               const value = e.target.value;
-
               handleChange("tipoCapturaAudi", value);
-
-              if (value === "INGRESO") {
-                handleChange("ordenBase", "B");
-              }
-
-              if (value === "REPORTE") {
-                handleChange("ordenBase", "N");
-              }
+              handleChange("ordenBase", value === "REPORTE" ? "N" : "B");
             }}
           >
-            <MenuItem value="INGRESO">INGRESO</MenuItem>
-            <MenuItem value="REPORTE">REPORTE DE TRABAJO</MenuItem>
-          </TextField>
+            <FormControlLabel value="INGRESO" control={<Radio />} label="Ingreso" />
+            <FormControlLabel value="REPORTE" control={<Radio />} label="Reporte de Trabajo" />
+          </RadioGroup>
         </FieldRow>
 
         {form.tipoCapturaAudi && (
@@ -938,8 +965,8 @@ export default function OTAudiPage() {
               <FieldRow label="Folio físico">
                 <TextField
                   fullWidth
-                  value={form.U_A_Orden}
-                  onChange={(e) => handleChange("U_A_Orden", e.target.value)}
+                  value={form.folio}
+                  onChange={(e) => handleChange("folio", e.target.value)}
                 />
               </FieldRow>
             )}
@@ -955,7 +982,7 @@ export default function OTAudiPage() {
             <FieldRow
               label={
                 isIngreso
-                  ? "Fecha de llegada a taller"
+                  ? "Fecha de llegada al taller"
                   : "Fecha de inicio de trabajo"
               }
             >
@@ -969,7 +996,7 @@ export default function OTAudiPage() {
             <FieldRow
               label={
                 isIngreso
-                  ? "Hora de llegada a taller"
+                  ? "Hora de llegada al taller"
                   : "Hora de inicio de trabajo"
               }
             >
@@ -1000,7 +1027,7 @@ export default function OTAudiPage() {
               >
                 {AUDI_TIPOS_ORDEN.map((tipo) => (
                   <MenuItem key={tipo.value} value={tipo.value}>
-                    {tipo.value} - {tipo.label}
+                    {tipo.label.charAt(0) + tipo.label.slice(1).toLowerCase()}
                   </MenuItem>
                 ))}
               </TextField>
@@ -1212,7 +1239,7 @@ export default function OTAudiPage() {
 
             <FieldRow
               label={
-                isReporte ? "Tipo de trabajo realizado" : "Trabajo realizado"
+                "Trabajo realizado"
               }
             >
               <TextField
@@ -1259,12 +1286,8 @@ export default function OTAudiPage() {
                   {refaccionesVisibles.map((ref, index) => {
                     const realIndex = index + refaccionOffset;
 
-                    const usaBusqueda =
-                      form.tipoRefacciones === "1"
-                        ? true
-                        : form.tipoRefacciones === "0"
-                          ? false
-                          : realIndex < 10;
+                    // In OTA every row (installed and required) searches the item catalog
+                    const usaBusqueda = true;
 
                     return (
                       <Box
@@ -1383,13 +1406,8 @@ export default function OTAudiPage() {
                         <TextField
                           label="Descripción"
                           value={ref.descripcion}
-                          onChange={(e) =>
-                            handleRefaccionChange(
-                              realIndex,
-                              "descripcion",
-                              e.target.value,
-                            )
-                          }
+                          InputProps={{ readOnly: true }}
+                          helperText={ref.numeroParte && !ref.descripcion ? "Elige el número de parte de la lista" : " "}
                         />
                       </Box>
                     );
@@ -1415,24 +1433,28 @@ export default function OTAudiPage() {
                     onChange={(e) =>
                       handleChange("horasTrabajadas", e.target.value)
                     }
+                    slotProps={{ htmlInput: { min: 0.5, step: 0.5 } }}
+                    helperText="En múltiplos de media hora, por ejemplo 1.5"
                   />
                 </FieldRow>
 
                 <FieldRow label="Fecha de término de trabajo">
-                  <CampoFecha
-                    value={form.fechaTermino}
-                    onChange={(iso) => handleChange("fechaTermino", iso)}
-                    error={errorRangoFechas}
+                  <TextField
+                    fullWidth
+                    value={form.fechaTermino ? `${diaMesDesdeIso(form.fechaTermino)}/${form.fechaTermino.slice(0, 4)}` : ""}
+                    placeholder="Se calcula automáticamente"
+                    InputProps={{ readOnly: true }}
+                    error={Boolean(errorRangoFechas)}
+                    helperText={errorRangoFechas || "Hora de inicio + horas trabajadas"}
                   />
                 </FieldRow>
 
                 <FieldRow label="Hora de término de trabajo">
                   <TextField
                     fullWidth
-                    type="time"
-                    InputLabelProps={{ shrink: true }}
                     value={form.horaSalida}
-                    onChange={(e) => handleChange("horaSalida", e.target.value)}
+                    placeholder="Se calcula automáticamente"
+                    InputProps={{ readOnly: true }}
                     error={Boolean(errorRangoFechas)}
                   />
                 </FieldRow>
