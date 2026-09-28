@@ -215,7 +215,8 @@ export const SGCService = {
     if (options?.file) fd.append("file", options.file);
     if (options?.pdf) fd.append("pdf", options.pdf);
     if (options?.fechaLimite) fd.append("FECHA_LIMITE", options.fechaLimite);
-    if (options?.numeroVersion) fd.append("NUMERO_VERSION", String(options.numeroVersion));
+    // 0 is a valid version, so check for null/undefined rather than truthiness
+    if (options?.numeroVersion != null) fd.append("NUMERO_VERSION", String(options.numeroVersion));
     if (options?.descripcionCambio) fd.append("DESCRIPCION_CAMBIO", options.descripcionCambio);
     if (options?.sinCambios) fd.append("SIN_CAMBIOS", "1");
 
