@@ -32,6 +32,7 @@ import SaveIcon from "@mui/icons-material/Save";
 
 import PageHeader from "../../../shared/components/PageHeader";
 import BotonVolverServicio from "../../../shared/components/BotonVolverServicio";
+import CampoTextoLimitado from "../../../shared/components/CampoTextoLimitado";
 import LoaderOverlay from "../../../shared/components/LoaderOverlay";
 import CampoFecha from "../../../shared/components/CampoFecha";
 import { me } from "../../../services/auth";
@@ -474,7 +475,8 @@ export default function OTAudiPage() {
         ? normalizeTextarea(value)
         : normalizeInput(value);
 
-    setForm((prev) => ({ ...prev, [key]: nextValue }));
+    const valorFinal = key === "descripcionFalla" ? nextValue.slice(0, 254) : nextValue;
+    setForm((prev) => ({ ...prev, [key]: valorFinal }));
   };
 
   const handleRefaccionChange = (
@@ -1343,14 +1345,10 @@ export default function OTAudiPage() {
 
             <Seccion icono={<DescriptionIcon />} titulo="Trabajo">
             <FieldRow label="Descripción de la falla" campo="descripcionFalla">
-              <TextField
-                fullWidth
-                multiline
-                rows={4}
+              <CampoTextoLimitado
+                nombre="Descripción de la falla"
                 value={form.descripcionFalla}
-                onChange={(e) =>
-                  handleChange("descripcionFalla", e.target.value)
-                }
+                onChange={(valor) => handleChange("descripcionFalla", valor)}
               />
             </FieldRow>
 

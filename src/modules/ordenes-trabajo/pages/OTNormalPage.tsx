@@ -18,6 +18,7 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 
 import PageHeader from "../../../shared/components/PageHeader";
 import BotonVolverServicio from "../../../shared/components/BotonVolverServicio";
+import CampoTextoLimitado from "../../../shared/components/CampoTextoLimitado";
 import CampoFecha from "../../../shared/components/CampoFecha";
 import { useDebouncedValue } from "../../../shared/hooks/useDebouncedValue";
 import {
@@ -299,7 +300,8 @@ export default function OTNormalPage() {
         ? normalizeTextarea(value)
         : normalizeInput(value);
 
-    setForm((prev) => ({ ...prev, [key]: nextValue }));
+    const valorFinal = key === "descripcionFalla" ? nextValue.slice(0, 254) : nextValue;
+    setForm((prev) => ({ ...prev, [key]: valorFinal }));
   };
 
   const handleRefaccionChange = (
@@ -1095,12 +1097,10 @@ export default function OTNormalPage() {
         </FieldRow>
 
         <FieldRow label="Descripción de la Falla">
-          <TextField
-            fullWidth
-            multiline
-            rows={4}
+          <CampoTextoLimitado
+            nombre="Descripción de la falla"
             value={form.descripcionFalla}
-            onChange={(e) => handleChange("descripcionFalla", e.target.value)}
+            onChange={(valor) => handleChange("descripcionFalla", valor)}
           />
         </FieldRow>
 
