@@ -34,10 +34,14 @@ export type SGCVersion = {
   ARCHIVO_PDF_DISPONIBLE: boolean;
 };
 
-/** A review without changes is an authorized entry that repeats an earlier authorized version number */
+/**
+ * A review without changes: its change description starts with "Revisión sin cambios" (the backend
+ * enforces it) or, for older entries, it repeats an earlier authorized version number.
+ */
 export function esRevisionSinCambios(v: SGCVersion, versiones: SGCVersion[]) {
+  if (v.ESTADO !== "AUTORIZADO") return false;
+  if ((v.DESCRIPCION_CAMBIO ?? "").startsWith("Revisión sin cambios")) return true;
   return (
-    v.ESTADO === "AUTORIZADO" &&
     versiones.some(
       (otra) =>
         otra.ESTADO === "AUTORIZADO" &&

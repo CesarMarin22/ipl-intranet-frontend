@@ -560,15 +560,13 @@ export default function SGCDocumentFormPage() {
     if (!authorizeDialogVersion) return;
 
     const numero = Number(authorizeNumero);
-    if (!authorizeSinCambios) {
-      if (!Number.isInteger(numero) || numero <= 0) {
-        await showWarning("Captura el número de versión (un número entero mayor a 0).");
-        return;
-      }
-      if (!authorizeDescripcion.trim()) {
-        await showWarning("Captura la descripción del cambio de esta versión.");
-        return;
-      }
+    if (!(authorizeSinCambios && document?.VERSION_ACTIVA_NUMERO) && (!Number.isInteger(numero) || numero <= 0)) {
+      await showWarning("Captura el número de versión (un número entero mayor a 0).");
+      return;
+    }
+    if (!authorizeSinCambios && !authorizeDescripcion.trim()) {
+      await showWarning("Captura la descripción del cambio de esta versión.");
+      return;
     }
 
     const hoy = new Date();
@@ -1387,7 +1385,7 @@ export default function SGCDocumentFormPage() {
               onChange={(e) => {
                 const revision = e.target.value === "revision";
                 setAuthorizeSinCambios(revision);
-                setAuthorizeNumero(String((revision ? document?.VERSION_ACTIVA_NUMERO : authorizeDialogVersion?.NUMERO_VERSION) || ""));
+                setAuthorizeNumero(String((revision && document?.VERSION_ACTIVA_NUMERO ? document?.VERSION_ACTIVA_NUMERO : authorizeDialogVersion?.NUMERO_VERSION) || ""));
                 setAuthorizeDescripcion(revision ? "Revisión sin cambios" : "");
               }}
             >
@@ -1395,23 +1393,24 @@ export default function SGCDocumentFormPage() {
               <FormControlLabel
                 value="revision"
                 control={<Radio />}
-                disabled={!document?.VERSION_ACTIVA_NUMERO}
-                label={document?.VERSION_ACTIVA_NUMERO ? `Revisión sin cambios (se conserva la versión ${document?.VERSION_ACTIVA_NUMERO})` : "Revisión sin cambios (requiere una versión autorizada)"}
+                label={document?.VERSION_ACTIVA_NUMERO ? `Revisión sin cambios (se conserva la versión ${document?.VERSION_ACTIVA_NUMERO})` : "Revisión sin cambios (indica qué versión se revisó)"}
               />
             </RadioGroup>
             <TextField
               fullWidth
-              required={!authorizeSinCambios}
-              disabled={authorizeSinCambios}
+              required={!(authorizeSinCambios && document?.VERSION_ACTIVA_NUMERO)}
+              disabled={Boolean(authorizeSinCambios && document?.VERSION_ACTIVA_NUMERO)}
               type="number"
               label="Número de versión"
               value={authorizeNumero}
               onChange={(e) => setAuthorizeNumero(e.target.value)}
               slotProps={{ htmlInput: { min: 1, step: 1 } }}
               helperText={
-                authorizeSinCambios
+                authorizeSinCambios && document?.VERSION_ACTIVA_NUMERO
                   ? "Una revisión sin cambios conserva el número de la versión vigente."
-                  : "Sugerido por el sistema; cámbialo si el documento ya traía otra revisión."
+                  : authorizeSinCambios
+                    ? "Captura la versión que se revisó (por ejemplo, la que ya traía el documento en papel)."
+                    : "Sugerido por el sistema; cámbialo si el documento ya traía otra revisión."
               }
             />
             <TextField
