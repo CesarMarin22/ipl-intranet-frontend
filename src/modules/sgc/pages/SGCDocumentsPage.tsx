@@ -77,6 +77,8 @@ export default function SGCDocumentsPage() {
     useState<File | null>(null);
   const [authorizePdfFile, setAuthorizePdfFile] = useState<File | null>(null);
   const [authorizeFechaLimite, setAuthorizeFechaLimite] = useState("");
+  const [authorizeNumero, setAuthorizeNumero] = useState("");
+  const [authorizeDescripcion, setAuthorizeDescripcion] = useState("");
 
   const toggleExpanded = (sgcid: number) => {
     setExpandedIds((prev) => {
@@ -142,17 +144,23 @@ export default function SGCDocumentsPage() {
       editableFile,
       pdfFile,
       fechaLimite,
+      numeroVersion,
+      descripcionCambio,
     }: {
       id: number;
       versionId: number;
       editableFile: File | null;
       pdfFile: File | null;
       fechaLimite: string | null;
+      numeroVersion: number;
+      descripcionCambio: string;
     }) =>
       SGCService.authorizeVersion(id, versionId, {
         file: editableFile,
         pdf: pdfFile,
         fechaLimite,
+        numeroVersion,
+        descripcionCambio,
       }),
     {
       invalidateKeys: [["sgc-documents"]],
@@ -162,15 +170,7 @@ export default function SGCDocumentsPage() {
   );
 
   const uploadVersionMutation = useAppMutation(
-    ({
-      id,
-      file,
-      descripcion,
-    }: {
-      id: number;
-      file: File;
-      descripcion: string;
-    }) => SGCService.uploadVersion(id, file, descripcion),
+    ({ id, file }: { id: number; file: File }) => SGCService.uploadVersion(id, file),
     {
       invalidateKeys: [["sgc-documents"]],
       successMessage: "Nueva versión subida, pendiente de autorización",
@@ -293,6 +293,13 @@ export default function SGCDocumentsPage() {
     setAuthorizeFechaLimite(
       row.FECHA_LIMITE ? row.FECHA_LIMITE.slice(0, 10) : "",
     );
+    const version = row.ULTIMA_VERSION;
+    setAuthorizeNumero(String(version?.NUMERO_VERSION || ""));
+    const descripcionPrevia =
+      version?.DESCRIPCION_CAMBIO && version.DESCRIPCION_CAMBIO !== "Pendiente de Calidad"
+        ? version.DESCRIPCION_CAMBIO
+        : "";
+    setAuthorizeDescripcion(descripcionPrevia || (!row.VERSION_ACTIVA_ID ? "Creación del documento" : ""));
   };
 
   const closeAuthorizeDialog = () => {
@@ -300,10 +307,22 @@ export default function SGCDocumentsPage() {
     setAuthorizeEditableFile(null);
     setAuthorizePdfFile(null);
     setAuthorizeFechaLimite("");
+    setAuthorizeNumero("");
+    setAuthorizeDescripcion("");
   };
 
   const confirmAuthorize = async () => {
     if (!authorizeDialogRow || !authorizeDialogRow.ULTIMA_VERSION) return;
+
+    const numero = Number(authorizeNumero);
+    if (!Number.isInteger(numero) || numero <= 0) {
+      await showWarning("Captura el número de versión (un número entero mayor a 0).");
+      return;
+    }
+    if (!authorizeDescripcion.trim()) {
+      await showWarning("Captura la descripción del cambio de esta versión.");
+      return;
+    }
 
     const yaHayFechaLimite = Boolean(authorizeDialogRow.FECHA_LIMITE);
 
@@ -327,6 +346,8 @@ export default function SGCDocumentsPage() {
       editableFile: authorizeEditableFile,
       pdfFile: authorizePdfFile,
       fechaLimite: authorizeFechaLimite || null,
+      numeroVersion: numero,
+      descripcionCambio: authorizeDescripcion.trim(),
     });
   };
 
@@ -341,28 +362,8 @@ export default function SGCDocumentsPage() {
 
     if (!file || !uploadTargetId) return;
 
-    const descripcion = await promptText(
-      "Describe brevemente qué cambió respecto a la versión anterior (obligatorio).",
-      "Descripción del cambio",
-      "Ej. se corrige el paso 3, se actualiza el responsable...",
-    );
-
-    if (descripcion === null) {
-      setUploadTargetId(null);
-      return;
-    }
-
-    if (!descripcion.trim()) {
-      await showWarning("La descripción del cambio es obligatoria");
-      setUploadTargetId(null);
-      return;
-    }
-
-    uploadVersionMutation.mutate({
-      id: uploadTargetId,
-      file,
-      descripcion: descripcion.trim(),
-    });
+    // Version number and change description are set by Calidad when authorizing
+    uploadVersionMutation.mutate({ id: uploadTargetId, file });
     setUploadTargetId(null);
   };
 
@@ -999,6 +1000,29 @@ export default function SGCDocumentsPage() {
           </DialogContentText>
 
           <Stack spacing={2}>
+            {/* Control de cambios: only Calidad defines the version and what changed */}
+            <TextField
+              fullWidth
+              required
+              type="number"
+              label="Número de versión"
+              value={authorizeNumero}
+              onChange={(e) => setAuthorizeNumero(e.target.value)}
+              slotProps={{ htmlInput: { min: 1, step: 1 } }}
+              helperText="Sugerido por el sistema; cámbialo si el documento ya traía otra revisión."
+            />
+            <TextField
+              fullWidth
+              required
+              multiline
+              minRows={2}
+              label="Descripción del cambio"
+              value={authorizeDescripcion}
+              onChange={(e) => setAuthorizeDescripcion(e.target.value.slice(0, 500))}
+              placeholder="Ej. se corrige el paso 3, se actualiza el responsable..."
+              helperText={`${authorizeDescripcion.length} / 500 caracteres`}
+            />
+
             {!authorizeDialogRow?.FECHA_LIMITE && (
               <TextField
                 fullWidth

@@ -125,6 +125,8 @@ export default function SGCDocumentFormPage() {
     useState<File | null>(null);
   const [authorizePdfFile, setAuthorizePdfFile] = useState<File | null>(null);
   const [authorizeFechaLimite, setAuthorizeFechaLimite] = useState("");
+  const [authorizeNumero, setAuthorizeNumero] = useState("");
+  const [authorizeDescripcion, setAuthorizeDescripcion] = useState("");
 
   const esTipoRegistro =
     form.TIPO_DOCUMENTO.trim().toLowerCase() ===
@@ -154,16 +156,22 @@ export default function SGCDocumentFormPage() {
       editableFile,
       pdfFile,
       fechaLimite,
+      numeroVersion,
+      descripcionCambio,
     }: {
       versionId: number;
       editableFile: File | null;
       pdfFile: File | null;
       fechaLimite: string | null;
+      numeroVersion: number;
+      descripcionCambio: string;
     }) =>
       SGCService.authorizeVersion(Number(id), versionId, {
         file: editableFile,
         pdf: pdfFile,
         fechaLimite,
+        numeroVersion,
+        descripcionCambio,
       }),
     {
       invalidateKeys: [["sgc-documents"]],
@@ -200,8 +208,7 @@ export default function SGCDocumentFormPage() {
   );
 
   const uploadVersionMutation = useAppMutation(
-    ({ file, descripcion }: { file: File; descripcion: string }) =>
-      SGCService.uploadVersion(Number(id), file, descripcion),
+    ({ file }: { file: File }) => SGCService.uploadVersion(Number(id), file),
     {
       invalidateKeys: [["sgc-documents"]],
       successMessage: "Nueva versión subida, pendiente de autorización",
@@ -520,6 +527,15 @@ export default function SGCDocumentFormPage() {
     setAuthorizeEditableFile(null);
     setAuthorizePdfFile(null);
     setAuthorizeFechaLimite(form.FECHA_LIMITE || "");
+    setAuthorizeNumero(String(version.NUMERO_VERSION || ""));
+    const esPrimera = !(document?.VERSIONES ?? []).some(
+      (v) => v.ESTADO === "AUTORIZADO" && v.VERSIONID !== version.VERSIONID,
+    );
+    const descripcionPrevia =
+      version.DESCRIPCION_CAMBIO && version.DESCRIPCION_CAMBIO !== "Pendiente de Calidad"
+        ? version.DESCRIPCION_CAMBIO
+        : "";
+    setAuthorizeDescripcion(descripcionPrevia || (esPrimera ? "Creación del documento" : ""));
   };
 
   const closeAuthorizeDialog = () => {
@@ -527,10 +543,22 @@ export default function SGCDocumentFormPage() {
     setAuthorizeEditableFile(null);
     setAuthorizePdfFile(null);
     setAuthorizeFechaLimite("");
+    setAuthorizeNumero("");
+    setAuthorizeDescripcion("");
   };
 
   const confirmAuthorize = async () => {
     if (!authorizeDialogVersion) return;
+
+    const numero = Number(authorizeNumero);
+    if (!Number.isInteger(numero) || numero <= 0) {
+      await showWarning("Captura el número de versión (un número entero mayor a 0).");
+      return;
+    }
+    if (!authorizeDescripcion.trim()) {
+      await showWarning("Captura la descripción del cambio de esta versión.");
+      return;
+    }
 
     const yaHayFechaLimite = Boolean(form.FECHA_LIMITE);
 
@@ -553,6 +581,8 @@ export default function SGCDocumentFormPage() {
       editableFile: authorizeEditableFile,
       pdfFile: authorizePdfFile,
       fechaLimite: authorizeFechaLimite || null,
+      numeroVersion: numero,
+      descripcionCambio: authorizeDescripcion.trim(),
     });
   };
 
@@ -594,23 +624,8 @@ export default function SGCDocumentFormPage() {
     e.target.value = "";
     if (!selected) return;
 
-    const descripcion = await promptText(
-      "Describe brevemente qué cambió respecto a la versión anterior (obligatorio).",
-      "Descripción del cambio",
-      "Ej. se corrige el paso 3, se actualiza el responsable...",
-    );
-
-    if (descripcion === null) return;
-
-    if (!descripcion.trim()) {
-      await showWarning("La descripción del cambio es obligatoria");
-      return;
-    }
-
-    uploadVersionMutation.mutate({
-      file: selected,
-      descripcion: descripcion.trim(),
-    });
+    // Version number and change description are set by Calidad when authorizing
+    uploadVersionMutation.mutate({ file: selected });
   };
 
   if (loading) return <LoaderOverlay label="Cargando documento..." />;
@@ -1340,9 +1355,7 @@ export default function SGCDocumentFormPage() {
         maxWidth="sm"
         fullWidth
       >
-        <DialogTitle>
-          Autorizar versión {authorizeDialogVersion?.NUMERO_VERSION}
-        </DialogTitle>
+        <DialogTitle>Autorizar documento</DialogTitle>
         <DialogContent>
           <DialogContentText sx={{ mb: 2 }}>
             {document?.ES_TIPO_FORMATO
@@ -1351,6 +1364,29 @@ export default function SGCDocumentFormPage() {
           </DialogContentText>
 
           <Stack spacing={2}>
+            {/* Control de cambios: only Calidad defines the version and what changed */}
+            <TextField
+              fullWidth
+              required
+              type="number"
+              label="Número de versión"
+              value={authorizeNumero}
+              onChange={(e) => setAuthorizeNumero(e.target.value)}
+              slotProps={{ htmlInput: { min: 1, step: 1 } }}
+              helperText="Sugerido por el sistema; cámbialo si el documento ya traía otra revisión."
+            />
+            <TextField
+              fullWidth
+              required
+              multiline
+              minRows={2}
+              label="Descripción del cambio"
+              value={authorizeDescripcion}
+              onChange={(e) => setAuthorizeDescripcion(e.target.value.slice(0, 500))}
+              placeholder="Ej. se corrige el paso 3, se actualiza el responsable..."
+              helperText={`${authorizeDescripcion.length} / 500 caracteres`}
+            />
+
             {!form.FECHA_LIMITE && (
               <TextField
                 fullWidth

@@ -168,10 +168,9 @@ export const SGCService = {
     return validateResponse(data);
   },
 
-  uploadVersion: async (id: number, file: File, descripcionCambio: string) => {
+  uploadVersion: async (id: number, file: File) => {
     const fd = new FormData();
     fd.append("file", file);
-    fd.append("DESCRIPCION_CAMBIO", descripcionCambio);
 
     const { data } = await api.post<
       ApiResponse<{ VERSIONID: number; NUMERO_VERSION: number }>
@@ -188,12 +187,17 @@ export const SGCService = {
       file?: File | null;
       pdf?: File | null;
       fechaLimite?: string | null;
+      /** Set only by Calidad: final version number and change description */
+      numeroVersion?: number;
+      descripcionCambio?: string;
     },
   ) => {
     const fd = new FormData();
     if (options?.file) fd.append("file", options.file);
     if (options?.pdf) fd.append("pdf", options.pdf);
     if (options?.fechaLimite) fd.append("FECHA_LIMITE", options.fechaLimite);
+    if (options?.numeroVersion) fd.append("NUMERO_VERSION", String(options.numeroVersion));
+    if (options?.descripcionCambio) fd.append("DESCRIPCION_CAMBIO", options.descripcionCambio);
 
     const { data } = await api.patch<ApiResponse<null>>(
       `/sgc/documents/${id}/versions/${versionId}/authorize`,
