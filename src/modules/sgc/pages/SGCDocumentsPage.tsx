@@ -67,6 +67,7 @@ export default function SGCDocumentsPage() {
   const [estadoFilter, setEstadoFilter] = useState<string>("");
   const [aprobacionFilter, setAprobacionFilter] = useState<string>("");
   const [depaFilter, setDepaFilter] = useState<string>("");
+  const [tipoFilter, setTipoFilter] = useState<string>("");
   const isMobile = useMediaQuery("(max-width:900px)");
   const { canCreate, canEdit, canDelete } = usePermissions();
 
@@ -202,10 +203,23 @@ export default function SGCDocumentsPage() {
         !aprobacionFilter || row.ESTADO_APROBACION === aprobacionFilter;
       const matchesDepa =
         !depaFilter || String(row.DEPAID ?? "") === depaFilter;
+      const matchesTipo =
+        !tipoFilter ||
+        (tipoFilter === "__SIN_TIPO__" ? !row.TIPO_DOCUMENTO : row.TIPO_DOCUMENTO === tipoFilter);
 
-      return matchesSearch && matchesEstado && matchesAprobacion && matchesDepa;
+      return matchesSearch && matchesEstado && matchesAprobacion && matchesDepa && matchesTipo;
     });
-  }, [q, rows, estadoFilter, aprobacionFilter, depaFilter]);
+  }, [q, rows, estadoFilter, aprobacionFilter, depaFilter, tipoFilter]);
+
+  // Only the types the documents actually use, so every option returns results
+  const tiposDocumento = useMemo(
+    () =>
+      [...new Set(rows.map((row) => row.TIPO_DOCUMENTO).filter((tipo): tipo is string => Boolean(tipo)))].sort((a, b) =>
+        a.localeCompare(b, "es"),
+      ),
+    [rows],
+  );
+  const haySinTipo = useMemo(() => rows.some((row) => !row.TIPO_DOCUMENTO), [rows]);
 
   const handleToggleStatus = (row: SGCDocument) => {
     if (!canEdit("SGC_DOCUMENTOS")) {
@@ -752,7 +766,7 @@ export default function SGCDocumentsPage() {
         }}
       >
         <Grid container spacing={1.5} sx={{ mb: 2 }}>
-          <Grid size={{ xs: 12, md: 4 }}>
+          <Grid size={{ xs: 12, md: 3.2 }}>
             <TextField
               label="Buscar por código, título, tipo o responsable"
               value={q}
@@ -761,7 +775,7 @@ export default function SGCDocumentsPage() {
             />
           </Grid>
 
-          <Grid size={{ xs: 6, md: 2.7 }}>
+          <Grid size={{ xs: 6, md: 2.2 }}>
             <FormControl fullWidth>
               <InputLabel>Vigencia</InputLabel>
               <Select
@@ -779,7 +793,7 @@ export default function SGCDocumentsPage() {
             </FormControl>
           </Grid>
 
-          <Grid size={{ xs: 6, md: 2.7 }}>
+          <Grid size={{ xs: 6, md: 2.2 }}>
             <FormControl fullWidth>
               <InputLabel>Autorización</InputLabel>
               <Select
@@ -799,7 +813,7 @@ export default function SGCDocumentsPage() {
             </FormControl>
           </Grid>
 
-          <Grid size={{ xs: 12, md: 2.6 }}>
+          <Grid size={{ xs: 6, md: 2.2 }}>
             <FormControl fullWidth>
               <InputLabel>Departamento</InputLabel>
               <Select
@@ -813,6 +827,25 @@ export default function SGCDocumentsPage() {
                     {d.NOMBRE}
                   </MenuItem>
                 ))}
+              </Select>
+            </FormControl>
+          </Grid>
+
+          <Grid size={{ xs: 6, md: 2.2 }}>
+            <FormControl fullWidth>
+              <InputLabel>Tipo de documento</InputLabel>
+              <Select
+                label="Tipo de documento"
+                value={tipoFilter}
+                onChange={(e) => setTipoFilter(e.target.value)}
+              >
+                <MenuItem value="">Todos</MenuItem>
+                {tiposDocumento.map((tipo) => (
+                  <MenuItem key={tipo} value={tipo}>
+                    {tipo}
+                  </MenuItem>
+                ))}
+                {haySinTipo && <MenuItem value="__SIN_TIPO__">Sin tipo</MenuItem>}
               </Select>
             </FormControl>
           </Grid>
