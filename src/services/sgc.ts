@@ -34,6 +34,19 @@ export type SGCVersion = {
   ARCHIVO_PDF_DISPONIBLE: boolean;
 };
 
+/** A review without changes is an authorized entry that repeats an earlier authorized version number */
+export function esRevisionSinCambios(v: SGCVersion, versiones: SGCVersion[]) {
+  return (
+    v.ESTADO === "AUTORIZADO" &&
+    versiones.some(
+      (otra) =>
+        otra.ESTADO === "AUTORIZADO" &&
+        otra.NUMERO_VERSION === v.NUMERO_VERSION &&
+        otra.VERSIONID < v.VERSIONID,
+    )
+  );
+}
+
 export type SGCDocument = {
   SGCID: number;
   CODIGO?: string | null;
@@ -190,6 +203,8 @@ export const SGCService = {
       /** Set only by Calidad: final version number and change description */
       numeroVersion?: number;
       descripcionCambio?: string;
+      /** Periodic review: keeps the current version number */
+      sinCambios?: boolean;
     },
   ) => {
     const fd = new FormData();
@@ -198,6 +213,7 @@ export const SGCService = {
     if (options?.fechaLimite) fd.append("FECHA_LIMITE", options.fechaLimite);
     if (options?.numeroVersion) fd.append("NUMERO_VERSION", String(options.numeroVersion));
     if (options?.descripcionCambio) fd.append("DESCRIPCION_CAMBIO", options.descripcionCambio);
+    if (options?.sinCambios) fd.append("SIN_CAMBIOS", "1");
 
     const { data } = await api.patch<ApiResponse<null>>(
       `/sgc/documents/${id}/versions/${versionId}/authorize`,

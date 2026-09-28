@@ -21,6 +21,9 @@ import {
   TextField,
   Typography,
   useMediaQuery,
+  FormControlLabel,
+  Radio,
+  RadioGroup,
 } from "@mui/material";
 import DownloadIcon from "@mui/icons-material/Download";
 import VisibilityIcon from "@mui/icons-material/Visibility";
@@ -43,6 +46,7 @@ import {
   ESTADO_COLORS,
   ESTADO_APROBACION_LABELS,
   ESTADO_APROBACION_COLORS,
+  esRevisionSinCambios,
   type SGCDocument,
   type SGCEstado,
   type SGCEstadoAprobacion,
@@ -79,6 +83,7 @@ export default function SGCDocumentsPage() {
   const [authorizeFechaLimite, setAuthorizeFechaLimite] = useState("");
   const [authorizeNumero, setAuthorizeNumero] = useState("");
   const [authorizeDescripcion, setAuthorizeDescripcion] = useState("");
+  const [authorizeSinCambios, setAuthorizeSinCambios] = useState(false);
 
   const toggleExpanded = (sgcid: number) => {
     setExpandedIds((prev) => {
@@ -146,6 +151,7 @@ export default function SGCDocumentsPage() {
       fechaLimite,
       numeroVersion,
       descripcionCambio,
+      sinCambios,
     }: {
       id: number;
       versionId: number;
@@ -154,6 +160,7 @@ export default function SGCDocumentsPage() {
       fechaLimite: string | null;
       numeroVersion: number;
       descripcionCambio: string;
+      sinCambios: boolean;
     }) =>
       SGCService.authorizeVersion(id, versionId, {
         file: editableFile,
@@ -161,6 +168,7 @@ export default function SGCDocumentsPage() {
         fechaLimite,
         numeroVersion,
         descripcionCambio,
+        sinCambios,
       }),
     {
       invalidateKeys: [["sgc-documents"]],
@@ -309,27 +317,32 @@ export default function SGCDocumentsPage() {
     setAuthorizeFechaLimite("");
     setAuthorizeNumero("");
     setAuthorizeDescripcion("");
+    setAuthorizeSinCambios(false);
   };
 
   const confirmAuthorize = async () => {
     if (!authorizeDialogRow || !authorizeDialogRow.ULTIMA_VERSION) return;
 
     const numero = Number(authorizeNumero);
-    if (!Number.isInteger(numero) || numero <= 0) {
-      await showWarning("Captura el número de versión (un número entero mayor a 0).");
-      return;
-    }
-    if (!authorizeDescripcion.trim()) {
-      await showWarning("Captura la descripción del cambio de esta versión.");
-      return;
+    if (!authorizeSinCambios) {
+      if (!Number.isInteger(numero) || numero <= 0) {
+        await showWarning("Captura el número de versión (un número entero mayor a 0).");
+        return;
+      }
+      if (!authorizeDescripcion.trim()) {
+        await showWarning("Captura la descripción del cambio de esta versión.");
+        return;
+      }
     }
 
-    const yaHayFechaLimite = Boolean(authorizeDialogRow.FECHA_LIMITE);
-
-    if (!yaHayFechaLimite && !authorizeFechaLimite) {
-      await showWarning(
-        "Este documento no tiene Fecha límite. Captúrala para poder autorizar.",
-      );
+    const hoy = new Date();
+    const hoyIso = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, "0")}-${String(hoy.getDate()).padStart(2, "0")}`;
+    if (!authorizeFechaLimite) {
+      await showWarning("Captura la Fecha límite: la siguiente revisión del documento.");
+      return;
+    }
+    if (authorizeFechaLimite <= hoyIso) {
+      await showWarning("La Fecha límite debe ser posterior a hoy: es la fecha de la siguiente revisión.");
       return;
     }
 
@@ -348,6 +361,7 @@ export default function SGCDocumentsPage() {
       fechaLimite: authorizeFechaLimite || null,
       numeroVersion: numero,
       descripcionCambio: authorizeDescripcion.trim(),
+      sinCambios: authorizeSinCambios,
     });
   };
 
@@ -420,6 +434,9 @@ export default function SGCDocumentsPage() {
           <Box>
             <Typography variant="body2" fontWeight={800}>
               Versión {v.NUMERO_VERSION}{" "}
+{esRevisionSinCambios(v, row.VERSIONES ?? []) && (
+  <Chip size="small" variant="outlined" color="info" label="Revisión sin cambios" sx={{ ml: 1 }} />
+)}
               <Chip
                 size="small"
                 sx={{ ml: 1 }}
@@ -1001,40 +1018,60 @@ export default function SGCDocumentsPage() {
 
           <Stack spacing={2}>
             {/* Control de cambios: only Calidad defines the version and what changed */}
+            <RadioGroup
+              value={authorizeSinCambios ? "revision" : "version"}
+              onChange={(e) => {
+                const revision = e.target.value === "revision";
+                setAuthorizeSinCambios(revision);
+                setAuthorizeNumero(String((revision ? authorizeDialogRow?.VERSION_ACTIVA_NUMERO : authorizeDialogRow?.ULTIMA_VERSION?.NUMERO_VERSION) || ""));
+                setAuthorizeDescripcion(revision ? "Revisión sin cambios" : "");
+              }}
+            >
+              <FormControlLabel value="version" control={<Radio />} label="Nueva versión (hubo cambios)" />
+              <FormControlLabel
+                value="revision"
+                control={<Radio />}
+                disabled={!authorizeDialogRow?.VERSION_ACTIVA_NUMERO}
+                label={authorizeDialogRow?.VERSION_ACTIVA_NUMERO ? `Revisión sin cambios (se conserva la versión ${authorizeDialogRow?.VERSION_ACTIVA_NUMERO})` : "Revisión sin cambios (requiere una versión autorizada)"}
+              />
+            </RadioGroup>
             <TextField
               fullWidth
-              required
+              required={!authorizeSinCambios}
+              disabled={authorizeSinCambios}
               type="number"
               label="Número de versión"
               value={authorizeNumero}
               onChange={(e) => setAuthorizeNumero(e.target.value)}
               slotProps={{ htmlInput: { min: 1, step: 1 } }}
-              helperText="Sugerido por el sistema; cámbialo si el documento ya traía otra revisión."
+              helperText={
+                authorizeSinCambios
+                  ? "Una revisión sin cambios conserva el número de la versión vigente."
+                  : "Sugerido por el sistema; cámbialo si el documento ya traía otra revisión."
+              }
             />
             <TextField
               fullWidth
-              required
+              required={!authorizeSinCambios}
               multiline
               minRows={2}
-              label="Descripción del cambio"
+              label={authorizeSinCambios ? "Notas de la revisión" : "Descripción del cambio"}
               value={authorizeDescripcion}
               onChange={(e) => setAuthorizeDescripcion(e.target.value.slice(0, 500))}
               placeholder="Ej. se corrige el paso 3, se actualiza el responsable..."
               helperText={`${authorizeDescripcion.length} / 500 caracteres`}
             />
 
-            {!authorizeDialogRow?.FECHA_LIMITE && (
-              <TextField
-                fullWidth
-                required
-                type="date"
-                label="Fecha límite"
-                InputLabelProps={{ shrink: true }}
-                value={authorizeFechaLimite}
-                onChange={(e) => setAuthorizeFechaLimite(e.target.value)}
-                helperText="Este documento todavía no tiene Fecha límite; captúrala aquí para poder autorizar."
-              />
-            )}
+            <TextField
+              fullWidth
+              required
+              type="date"
+              label="Fecha límite (siguiente revisión)"
+              InputLabelProps={{ shrink: true }}
+              value={authorizeFechaLimite}
+              onChange={(e) => setAuthorizeFechaLimite(e.target.value)}
+              helperText="Al autorizar, hoy queda como última revisión. Esta fecha debe ser posterior a hoy."
+            />
 
             {!authorizeDialogRow?.ES_TIPO_FORMATO && (
               <Box>
