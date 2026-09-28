@@ -702,7 +702,7 @@ export default function SGCDocumentsPage() {
       />
 
       <PageHeader
-        title="Control de Documentos (SGC)"
+        title="Información Documentada"
         subtitle="Documentos del Sistema de Gestión de Calidad, su vigencia y su estado de autorización."
         action={
           <Stack direction="row" spacing={1}>
