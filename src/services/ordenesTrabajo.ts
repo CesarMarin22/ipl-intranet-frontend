@@ -183,10 +183,11 @@ export const OrdenesTrabajoService = {
   },
 
   // OT Audi
-  listarAudi: async (page = 1) => {
+  /** tipoOT: "B" = ingreso a taller, "N" = reporte de trabajo; empty for both */
+  listarAudi: async (page = 1, tipoOT = "") => {
     const res = await api.get<ApiResponse<any>>(
       "/ordenes-trabajo/audi",
-      { params: { page } }
+      { params: tipoOT ? { page, tipo_ot: tipoOT } : { page } }
     );
     return res.data.data;
   },

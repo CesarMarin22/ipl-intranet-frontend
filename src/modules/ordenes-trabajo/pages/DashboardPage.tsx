@@ -98,6 +98,7 @@ export default function DashboardPage() {
   const [flash, setFlash] = useState<FlashReport[]>([]);
   const [ots, setOts] = useState<OrdenTrabajo[]>([]);
   const [otTotales, setOtTotales] = useState({ normal: 0, audi: 0, paginas: 1 });
+  const [fuentesOT, setFuentesOT] = useState(1);
   const [cargandoInicial, setCargandoInicial] = useState(true);
   const [cargandoOT, setCargandoOT] = useState(false);
   const [nuevoMenuAnchor, setNuevoMenuAnchor] = useState<HTMLElement | null>(null);
@@ -150,10 +151,15 @@ export default function DashboardPage() {
     const cargarOT = async () => {
       setCargandoOT(true);
       const vacio = { ordenes: [], total_registros: 0, total_paginas: 1 };
+      const pagina = vista === "ot" ? page : 1;
+      // The type filter is applied by the backend so Ingresos/Reportes are found across all pages
+      const quiereNormal = verNormal && (!filtroTipoOT || filtroTipoOT === "normal");
+      const quiereAudi = verAudi && (!filtroTipoOT || filtroTipoOT.startsWith("audi"));
+      const tipoOT = filtroTipoOT === "audi_B" ? "B" : filtroTipoOT === "audi_N" ? "N" : "";
       try {
         const [normal, audi] = await Promise.all([
-          verNormal ? OrdenesTrabajoService.listarNormal(vista === "ot" ? page : 1).catch(() => vacio) : vacio,
-          verAudi ? OrdenesTrabajoService.listarAudi(vista === "ot" ? page : 1).catch(() => vacio) : vacio,
+          quiereNormal ? OrdenesTrabajoService.listarNormal(pagina).catch(() => vacio) : vacio,
+          quiereAudi ? OrdenesTrabajoService.listarAudi(pagina, tipoOT).catch(() => vacio) : vacio,
         ]);
         const lista: OrdenTrabajo[] = [
           ...(normal.ordenes || []).map((o: any) => ({ ...o, tipo: "normal" as const })),
@@ -161,17 +167,19 @@ export default function DashboardPage() {
         ];
         lista.sort((a, b) => b.DocNum - a.DocNum);
         setOts(lista);
-        setOtTotales({
-          normal: normal.total_registros || 0,
-          audi: audi.total_registros || 0,
+        setFuentesOT(Number(quiereNormal) + Number(quiereAudi) || 1);
+        // Cards keep the overall totals: only refresh a total when its full list was queried
+        setOtTotales((prev) => ({
+          normal: quiereNormal ? normal.total_registros || 0 : prev.normal,
+          audi: quiereAudi && !tipoOT ? audi.total_registros || 0 : prev.audi,
           paginas: Math.max(normal.total_paginas || 1, audi.total_paginas || 1),
-        });
+        }));
       } finally {
         setCargandoOT(false);
       }
     };
     cargarOT();
-  }, [loadingPermisos, vista === "ot" ? page : 0]);
+  }, [loadingPermisos, vista === "ot" ? page : 0, filtroTipoOT]);
 
   const flashFiltrados = useMemo(() => {
     const texto = q.trim().toLowerCase();
@@ -203,8 +211,7 @@ export default function DashboardPage() {
   const paginaFlash = Math.min(page, paginasFlash);
   const flashPagina = flashFiltrados.slice((paginaFlash - 1) * POR_PAGINA, paginaFlash * POR_PAGINA);
 
-  const otsVisibles = filtroTipoOT ? ots.filter((o) => o.tipo === filtroTipoOT) : ots;
-  const fuentesOT = (verNormal ? 1 : 0) + (verAudi ? 1 : 0);
+  const otsVisibles = ots;
 
   const hayFiltrosFlash = Boolean(q || filtroSeveridad || filtroClasificacion || filtroEstatus);
   const tiposCrear = TIPOS_REGISTRO.filter((t) => canCreate(t.modulo));
@@ -452,12 +459,14 @@ export default function DashboardPage() {
             ) : (
               <>
                 {/* Work orders */}
-                {verNormal && verAudi && (
+                {verAudi && (
                   <Box sx={{ mb: 2.5 }}>
-                    <TextField select size="small" label="Tipo" value={filtroTipoOT} onChange={(e) => actualizar({ tipo: e.target.value })} sx={{ minWidth: 200 }}>
+                    <TextField select size="small" label="Tipo" value={filtroTipoOT} onChange={(e) => actualizar({ tipo: e.target.value, page: 1 })} sx={{ minWidth: 240 }}>
                       <MenuItem value="">Todas</MenuItem>
-                      <MenuItem value="normal">Orden de Trabajo</MenuItem>
-                      <MenuItem value="audi">OT Audi</MenuItem>
+                      {verNormal && <MenuItem value="normal">Orden de Trabajo</MenuItem>}
+                      <MenuItem value="audi">OT Audi (todas)</MenuItem>
+                      <MenuItem value="audi_B">OT Audi · Ingreso</MenuItem>
+                      <MenuItem value="audi_N">OT Audi · Reporte de trabajo</MenuItem>
                     </TextField>
                   </Box>
                 )}
