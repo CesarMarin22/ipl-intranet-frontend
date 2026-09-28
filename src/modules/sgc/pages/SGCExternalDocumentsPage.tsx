@@ -34,7 +34,7 @@ import {
   type SGCExternalDocument,
   type SGCCatalogDepartment,
 } from "../../../services/sgc";
-import { getSucursales, type Sucursal } from "../../../services/sucursales";
+import { getSucursales, type SucursalRow as Sucursal } from "../../../services/sucursales";
 import { useAppMutation } from "../../../shared/hooks/useAppMutation";
 import PermissionButton from "../../../shared/components/PermissionButton";
 import { usePermissions } from "../../../shared/hooks/usePermissions";
