@@ -31,6 +31,7 @@ import LocalShippingIcon from "@mui/icons-material/LocalShipping";
 import SaveIcon from "@mui/icons-material/Save";
 
 import PageHeader from "../../../shared/components/PageHeader";
+import BotonVolverServicio from "../../../shared/components/BotonVolverServicio";
 import LoaderOverlay from "../../../shared/components/LoaderOverlay";
 import CampoFecha from "../../../shared/components/CampoFecha";
 import { me } from "../../../services/auth";
@@ -1021,6 +1022,7 @@ export default function OTAudiPage() {
       <PageHeader
         title="Nueva OT Audi"
         subtitle={isReporte ? "Reporte de trabajo" : "Ingreso a taller"}
+        action={<BotonVolverServicio />}
       />
 
       <CamposContext.Provider value={contextoCampos}>

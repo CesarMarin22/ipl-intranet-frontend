@@ -17,6 +17,7 @@ import {
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 
 import PageHeader from "../../../shared/components/PageHeader";
+import BotonVolverServicio from "../../../shared/components/BotonVolverServicio";
 import CampoFecha from "../../../shared/components/CampoFecha";
 import { useDebouncedValue } from "../../../shared/hooks/useDebouncedValue";
 import {
@@ -823,7 +824,7 @@ export default function OTNormalPage() {
   return (
     <Box>
       {saving && <LoaderOverlay label="Guardando orden de trabajo..." />}
-      <PageHeader title="Crear OT" subtitle="Captura de Ordenes de Trabajo " />
+      <PageHeader title="Crear OT" subtitle="Captura de Ordenes de Trabajo " action={<BotonVolverServicio />} />
 
       <Paper sx={{ p: 3 }}>
         <FieldRow label="Sucursal">

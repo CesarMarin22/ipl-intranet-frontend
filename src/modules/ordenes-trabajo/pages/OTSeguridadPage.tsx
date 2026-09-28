@@ -24,6 +24,7 @@ import PrintIcon from "@mui/icons-material/Print";
 import CloseIcon from "@mui/icons-material/Close";
 
 import PageHeader from "../../../shared/components/PageHeader";
+import BotonVolverServicio from "../../../shared/components/BotonVolverServicio";
 import { useDebouncedValue } from "../../../shared/hooks/useDebouncedValue";
 import CampoFecha from "../../../shared/components/CampoFecha";
 import { formatDateForSAP, validateSingleDateTime } from "../../../shared/utils/dateUtils";
@@ -441,7 +442,7 @@ export default function OTSeguridadPage() {
   return (
     <Box sx={{ "@media print": { "& .no-print": { display: "none" } } }}>
       {savingStep && <LoaderOverlay label={savingStep} />}
-      <PageHeader title="Nuevo Flash Report" />
+      <PageHeader title="Nuevo Flash Report" action={<BotonVolverServicio />} />
 
       <Paper sx={{ p: 3, mt: 3, "@media print": { boxShadow: "none" } }}>
         <Box sx={{ display: "grid", gap: 2 }}>
