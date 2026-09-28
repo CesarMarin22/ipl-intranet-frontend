@@ -16,13 +16,13 @@ import {
   Card,
   CardMedia,
   CardActions,
+  Tooltip,
 } from "@mui/material";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, type ReactNode } from "react";
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import DeleteIcon from "@mui/icons-material/Delete";
 import PrintIcon from "@mui/icons-material/Print";
 import CloseIcon from "@mui/icons-material/Close";
-import TipsAndUpdatesIcon from "@mui/icons-material/TipsAndUpdates";
 
 import PageHeader from "../../../shared/components/PageHeader";
 import BotonVolverServicio from "../../../shared/components/BotonVolverServicio";
@@ -83,17 +83,33 @@ function getCalFmt15Link(tipo: string, nivel: string): string | null {
   return null;
 }
 
-// Writing guide shown above a field; hidden when printing
-function GuiaCampo({ texto }: { texto: string }) {
+// Writing guide that floats above a field while it has focus and is still empty,
+// so it is read before typing and disappears with the first character
+function ConGuia({ titulo, texto, vacio, children }: { titulo: string; texto: string; vacio: boolean; children: ReactNode }) {
+  const [enfocado, setEnfocado] = useState(false);
   return (
-    <Alert
-      severity="info"
-      icon={<TipsAndUpdatesIcon fontSize="small" />}
-      className="no-print"
-      sx={{ py: 0.25, "& .MuiAlert-message": { fontSize: 13 } }}
+    <Tooltip
+      open={enfocado && vacio}
+      placement="top-start"
+      arrow
+      disableHoverListener
+      disableFocusListener
+      disableTouchListener
+      title={
+        <Box sx={{ p: 0.5 }}>
+          <Typography sx={{ fontWeight: 800, fontSize: 13, mb: 0.5 }}>{titulo}</Typography>
+          <Typography sx={{ fontSize: 13, lineHeight: 1.5 }}>{texto}</Typography>
+        </Box>
+      }
+      slotProps={{
+        tooltip: { sx: { maxWidth: 480, bgcolor: "#1f2937", color: "#fff", boxShadow: 6, border: "1px solid rgba(241,135,0,.5)" } },
+        arrow: { sx: { color: "#1f2937" } },
+      }}
     >
-      {texto}
-    </Alert>
+      <Box onFocus={() => setEnfocado(true)} onBlur={() => setEnfocado(false)}>
+        {children}
+      </Box>
+    </Tooltip>
   );
 }
 
@@ -629,8 +645,7 @@ export default function OTSeguridadPage() {
           )}
 
           {/* 11. Descripción del Suceso */}
-          <Box sx={{ display: "grid", gap: 1 }}>
-          <GuiaCampo texto="¿Qué estabas haciendo? ¿Qué ocurrió? ¿Qué hiciste o dejaste de hacer que contribuyó al suceso? Describe los hechos, evitando justificar o minimizar lo ocurrido." />
+          <ConGuia titulo="Descripción del suceso" texto="¿Qué estabas haciendo? ¿Qué ocurrió? ¿Qué hiciste o dejaste de hacer que contribuyó al suceso? Describe los hechos, evitando justificar o minimizar lo ocurrido." vacio={!form.descripcionSuceso.trim()}>
           <TextField
             label="Descripción del Suceso"
             value={form.descripcionSuceso}
@@ -640,11 +655,10 @@ export default function OTSeguridadPage() {
             fullWidth
             required
           />
-          </Box>
+          </ConGuia>
 
           {/* 12. Posible Causa */}
-          <Box sx={{ display: "grid", gap: 1 }}>
-          <GuiaCampo texto="Ve más allá del error humano: ¿Qué condición o decisión derivó que ocurriera el suceso? Considera procedimiento, capacitación, comunicación, equipo, entorno y factores humanos." />
+          <ConGuia titulo="Posible causa" texto="Ve más allá del error humano: ¿Qué condición o decisión derivó que ocurriera el suceso? Considera procedimiento, capacitación, comunicación, equipo, entorno y factores humanos." vacio={!form.posibleCausa.trim()}>
           <TextField
             label="Posible Causa"
             value={form.posibleCausa}
@@ -658,7 +672,7 @@ export default function OTSeguridadPage() {
             fullWidth
             helperText={`${form.posibleCausa.length} / 254 caracteres`}
           />
-          </Box>
+          </ConGuia>
 
           {/* 13. Acciones realizadas para atender la situación */}
           <TextField
@@ -671,8 +685,7 @@ export default function OTSeguridadPage() {
           />
 
           {/* 14. Plan de acción */}
-          <Box sx={{ display: "grid", gap: 1 }}>
-          <GuiaCampo texto="Hazlo accionable: ¿Qué cambiaremos para evitar la recurrencia? Define la acción, responsable y fecha compromiso. Evita acciones genéricas como “poner más atención” o “tener más cuidado”." />
+          <ConGuia titulo="Plan de acción" texto="Hazlo accionable: ¿Qué cambiaremos para evitar la recurrencia? Define la acción, responsable y fecha compromiso. Evita acciones genéricas como “poner más atención” o “tener más cuidado”." vacio={!form.planAccion.trim()}>
           <TextField
             label="Plan de acción"
             value={form.planAccion}
@@ -681,7 +694,7 @@ export default function OTSeguridadPage() {
             rows={3}
             fullWidth
           />
-          </Box>
+          </ConGuia>
 
           {/* 15. Lecciones aprendidas */}
           <TextField
