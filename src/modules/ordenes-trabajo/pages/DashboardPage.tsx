@@ -79,6 +79,7 @@ type OrdenTrabajo = {
   FechaFormateada: string;
   U_CreateUser: string;
   U_A_TipoOT?: string;
+  U_A_FolioE?: string;
   tipo: "normal" | "audi";
 };
 
@@ -480,7 +481,7 @@ export default function DashboardPage() {
                         <TableCell sx={encabezado}>#</TableCell>
                         <TableCell sx={encabezado}>Folio SAP</TableCell>
                         <TableCell sx={encabezado}>Tipo</TableCell>
-                        <TableCell sx={encabezado}>Folio físico</TableCell>
+                        <TableCell sx={encabezado}>Folio físico / Aviso</TableCell>
                         <TableCell sx={encabezado}>Cliente</TableCell>
                         <TableCell sx={encabezado}>No. serie equipo</TableCell>
                         <TableCell sx={encabezado}>Fecha</TableCell>
@@ -516,7 +517,13 @@ export default function DashboardPage() {
                                 )}
                               </Box>
                             </TableCell>
-                            <TableCell>{o.CustomerRefNo || "—"}</TableCell>
+                            <TableCell>
+                              {/* Audi keeps the número de aviso in U_A_FolioE; an Ingreso has no folio físico */}
+                              <Box>{o.CustomerRefNo || (o.tipo === "audi" ? "" : "—")}</Box>
+                              {o.tipo === "audi" && o.U_A_FolioE && (
+                                <Typography variant="caption" color="text.secondary">Aviso {o.U_A_FolioE}</Typography>
+                              )}
+                            </TableCell>
                             <TableCell sx={{ maxWidth: 240 }}>{o.CustomerName}</TableCell>
                             <TableCell>{o.ManufacturerSerialNum || "—"}</TableCell>
                             <TableCell sx={{ whiteSpace: "nowrap" }}>{o.FechaFormateada}</TableCell>
