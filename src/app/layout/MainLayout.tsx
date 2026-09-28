@@ -1,10 +1,28 @@
 import { Box, useMediaQuery } from "@mui/material";
 import { Outlet, useNavigate } from "react-router-dom";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Sidebar from "./Sidebar";
 import Topbar from "./Topbar";
 import { useAuth } from "../providers/useAuth";
 import { useTheme } from "@mui/material/styles";
+
+const CLAVE_SIDEBAR = "ipl.sidebarAbierto";
+
+function leerPreferenciaSidebar() {
+  try {
+    return localStorage.getItem(CLAVE_SIDEBAR) !== "0";
+  } catch {
+    return true;
+  }
+}
+
+function guardarPreferenciaSidebar(abierto: boolean) {
+  try {
+    localStorage.setItem(CLAVE_SIDEBAR, abierto ? "1" : "0");
+  } catch {
+    // storage unavailable (private mode): the choice just isn't remembered
+  }
+}
 
 export default function MainLayout() {
   const nav = useNavigate();
@@ -12,9 +30,15 @@ export default function MainLayout() {
 
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
+  const isTablet = useMediaQuery(theme.breakpoints.between("md", "lg"));
 
-  const [open, setOpen] = useState(true);
+  // Desktop remembers whether the user left the sidebar open; tablets start collapsed to icons
+  const [open, setOpen] = useState(() => leerPreferenciaSidebar());
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  useEffect(() => {
+    setOpen(isTablet ? false : leerPreferenciaSidebar());
+  }, [isTablet]);
 
   const onLogout = async () => {
     await signOut();
@@ -25,7 +49,10 @@ export default function MainLayout() {
     if (isMobile) {
       setMobileOpen((prev) => !prev);
     } else {
-      setOpen((prev) => !prev);
+      setOpen((prev) => {
+        if (!isTablet) guardarPreferenciaSidebar(!prev);
+        return !prev;
+      });
     }
   };
 
