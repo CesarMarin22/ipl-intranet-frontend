@@ -1,4 +1,5 @@
 import {
+  Alert,
   Box,
   Button,
   Chip,
@@ -39,6 +40,7 @@ import TaskAltIcon from "@mui/icons-material/TaskAlt";
 import CloseIcon from "@mui/icons-material/Close";
 import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
+import LocalShippingIcon from "@mui/icons-material/LocalShipping";
 
 import { OrdenesTrabajoService, type ArchivoDrive } from "../../../services/ordenesTrabajo";
 import LoaderOverlay from "../../../shared/components/LoaderOverlay";
@@ -456,7 +458,10 @@ export default function DetallesOTPage() {
               <ArrowBackIcon />
             </IconButton>
             <Box sx={{ minWidth: 0 }}>
-              <Chip icon={info.icono as any} label={info.titulo} size="small" sx={{ fontWeight: 800, bgcolor: alpha(info.color, 0.2), color: info.color, mb: 1 }} />
+              <Chip
+                icon={info.icono as any}
+                label={tipoVista === "audi" ? `${info.titulo} · ${esIngresoAudi(ot) ? "Ingreso" : "Reporte"}` : info.titulo}
+                size="small" sx={{ fontWeight: 800, bgcolor: alpha(info.color, 0.2), color: info.color, mb: 1 }} />
               <Typography variant="h4" sx={{ fontWeight: 900, lineHeight: 1.1 }}>
                 Folio SAP {ot.DocNum}
               </Typography>
@@ -570,28 +575,54 @@ function VistaFlash({ ot, accent }: { ot: OT; accent: string }) {
   );
 }
 
+// U_A_TipoOT: B = ingreso a taller, N = reporte de trabajo (same values the Audi form writes)
+const esIngresoAudi = (ot: OT) => texto(ot.U_A_TipoOT) === "B";
+
+const NOMBRE_ZPM: Record<string, string> = { ZPM2: "Preventivo", ZPM3: "Correctivo", ZPM8: "Ajustes" };
+
 function VistaOT({ ot, tipo, accent }: { ot: OT; tipo: TipoVista; accent: string }) {
   const esAudi = tipo === "audi";
-  const tipoOrdenAudi = ({ B: "Aviso", N: "Reporte de Trabajo" } as Record<string, string>)[texto(ot.U_A_TipoOT)] || "Desconocido";
+  const ingreso = esAudi && esIngresoAudi(ot);
+  const zpm = texto(ot.U_A_Orden);
 
   return (
     <Grid container spacing={3}>
+      {esAudi && (
+        <Grid size={{ xs: 12 }}>
+          <Alert severity={ingreso ? "info" : "success"} icon={ingreso ? <LocalShippingIcon /> : <BuildIcon />} sx={{ fontWeight: 700, borderRadius: 3 }}>
+            {ingreso
+              ? "INGRESO A TALLER: registro de llegada del equipo. Aún no incluye trabajo, refacciones ni horas."
+              : "REPORTE DE TRABAJO: trabajo realizado, diagnóstico, refacciones y horas trabajadas."}
+          </Alert>
+        </Grid>
+      )}
+
       <Grid size={{ xs: 12, lg: 6 }}>
         <Section icon={<InfoOutlinedIcon />} title="Datos generales" accent={accent}>
           <Fields>
             <Field label="Usuario de creación" value={texto(ot.U_CreateUser)} />
-            <Field label="Sucursal" value={esAudi ? `PUE (${texto(ot.SucursalName)})` : texto(ot.SucursalName)} />
-            <Field label="Tipo de orden" value={esAudi ? tipoOrdenAudi : texto(ot.CallTypeName)} />
-            <Field label="Folio físico" value={texto(ot.CustomerRefNo)} />
+            <Field label={esAudi ? "Serie" : "Sucursal"} value={esAudi ? `PUE (${texto(ot.SucursalName)})` : texto(ot.SucursalName)} />
             {esAudi ? (
               <>
-                <Field label="Número de aviso" value={texto(ot.DocNum)} />
-                <Field label="Código SAP de tipo de orden" value={texto(ot.U_A_Orden)} />
-                <Field label="Defecto" value={texto(ot.U_A_Defectos)} />
-                <Field label="Causa" value={texto(ot.U_A_Causa)} />
-                <Field label="Tipo de daño" value={texto(ot.U_A_TipoDano)} />
+                <Field label="Tipo de captura" value={ingreso ? "Ingreso a taller" : "Reporte de trabajo"} />
+                <Field label="Tipo de orden" value={zpm ? `${NOMBRE_ZPM[zpm] || zpm} (${zpm})` : ""} />
+                {!ingreso && <Field label="Folio físico" value={texto(ot.CustomerRefNo)} />}
+                <Field label="Número de aviso" value={texto(ot.U_A_FolioE)} />
+                {!ingreso && (
+                  <>
+                    <Field label="Defecto" value={ot.ProblemTypeName === "N/A" ? "" : texto(ot.ProblemTypeName)} />
+                    <Field label="Causa" value={texto(ot.U_A_Causa)} />
+                    <Field label="Tipo de daño" value={texto(ot.U_A_TipoDano)} />
+                  </>
+                )}
               </>
             ) : (
+              <>
+                <Field label="Tipo de orden" value={texto(ot.CallTypeName)} />
+                <Field label="Folio físico" value={texto(ot.CustomerRefNo)} />
+              </>
+            )}
+            {esAudi ? null : (
               <Field label="Tipo de problema" value={ot.ProblemTypeName === "N/A" ? "" : texto(ot.ProblemTypeName)} />
             )}
             <Field label="Persona que reporta" value={texto(ot.U_PersonWhoReports)} />
@@ -617,7 +648,7 @@ function VistaOT({ ot, tipo, accent }: { ot: OT; tipo: TipoVista; accent: string
             <Field label="Modelo" value={texto(ot.ItemDescription)} full />
             <Field label="Número económico" value={texto(ot.InternalSerialNum)} />
             <Field label={esAudi ? "Número de artículo" : "Código de artículo"} value={texto(ot.ItemCode)} />
-            <Field label="Horómetro" value={texto(ot.U_Horometro)} />
+            {(!esAudi || ingreso) && <Field label="Horómetro" value={texto(ot.U_Horometro)} />}
           </Fields>
         </Section>
       </Grid>
@@ -631,26 +662,35 @@ function VistaOT({ ot, tipo, accent }: { ot: OT; tipo: TipoVista; accent: string
         </Section>
       </Grid>
 
-      <Grid size={{ xs: 12, lg: 6 }}>
-        <Section icon={<InventoryIcon />} title="Refacciones" accent={accent} delay={0.15}>
-          <Refacciones ot={ot} />
-        </Section>
-      </Grid>
+      {!ingreso && (
+        <Grid size={{ xs: 12, lg: 6 }}>
+          <Section icon={<InventoryIcon />} title="Refacciones" accent={accent} delay={0.15}>
+            <Refacciones ot={ot} />
+          </Section>
+        </Grid>
+      )}
 
-      <Grid size={{ xs: 12, lg: 6 }}>
-        <Section icon={<ScheduleIcon />} title="Tiempos" accent={accent} delay={0.2}>
-          <Tiempos
-            ot={ot}
-            accent={accent}
-            extra={
-              esAudi && (
-                <Fields>
-                  <Field label="Personas que trabajaron" value={Number(ot.U_A_NumTec) ? Number(ot.U_A_NumTec) : ""} />
-                  <Field label="Horas trabajadas" value={Number(ot.U_A_Horas) ? Number(ot.U_A_Horas) : ""} />
-                </Fields>
-              )
-            }
-          />
+      <Grid size={{ xs: 12, lg: ingreso ? 12 : 6 }}>
+        <Section icon={<ScheduleIcon />} title={ingreso ? "Llegada al taller" : "Tiempos"} accent={accent} delay={0.2}>
+          {ingreso ? (
+            <Fields>
+              <Field label="Fecha de llegada al taller" value={fecha(ot.StartDate)} />
+              <Field label="Hora de llegada al taller" value={hora(ot.U_HoraInicio || ot.StartTime)} />
+            </Fields>
+          ) : (
+            <Tiempos
+              ot={ot}
+              accent={accent}
+              extra={
+                esAudi && (
+                  <Fields>
+                    <Field label="Personas que trabajaron" value={Number(ot.U_A_NumTec) ? Number(ot.U_A_NumTec) : ""} />
+                    <Field label="Horas trabajadas" value={Number(ot.U_A_Horas) ? Number(ot.U_A_Horas) : ""} />
+                  </Fields>
+                )
+              }
+            />
+          )}
         </Section>
       </Grid>
 
@@ -659,11 +699,12 @@ function VistaOT({ ot, tipo, accent }: { ot: OT; tipo: TipoVista; accent: string
           <Fields>
             {esAudi ? (
               <>
-                <Field label="Realizó trabajo" value={texto(ot.U_Tecnico2)} />
-                <Field label="Técnico 2" value={texto(ot.U_Tecnico3)} />
-                <Field label="Técnico 3" value={texto(ot.U_Tecnico4)} />
+                {/* Same columns the Audi form writes: TechnicianCode = realizó, U_Tecnico2 = revisó, U_Tecnico3/4 = técnicos 2/3 */}
+                <Field label="Realizó trabajo" value={texto(ot.RealizoTrabajoNombre)} />
+                {!ingreso && <Field label="Técnico 2" value={texto(ot.U_Tecnico3)} />}
+                {!ingreso && <Field label="Técnico 3" value={texto(ot.U_Tecnico4)} />}
                 <Field label="Nombre de REV" value={texto(ot.U_CSSR)} />
-                <Field label="Revisó trabajo" value={texto(ot.U_Supervisor)} />
+                <Field label="Revisó trabajo" value={texto(ot.U_Tecnico2)} />
                 <Field label="Visto bueno del cliente" value={texto(ot.U_Supervisor)} />
               </>
             ) : (

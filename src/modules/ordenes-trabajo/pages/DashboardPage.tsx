@@ -78,6 +78,7 @@ type OrdenTrabajo = {
   ManufacturerSerialNum?: string;
   FechaFormateada: string;
   U_CreateUser: string;
+  U_A_TipoOT?: string;
   tipo: "normal" | "audi";
 };
 
@@ -493,7 +494,18 @@ export default function DashboardPage() {
                             <TableCell sx={{ color: "text.secondary" }}>{(page - 1) * POR_PAGINA * fuentesOT + i + 1}</TableCell>
                             <TableCell sx={{ fontWeight: 700 }}>{o.DocNum}</TableCell>
                             <TableCell>
-                              <Chip size="small" label={o.tipo === "audi" ? "OT Audi" : "Orden de Trabajo"} color={o.tipo === "audi" ? "info" : "default"} />
+                              <Box sx={{ display: "flex", gap: 0.5, flexWrap: "wrap" }}>
+                                <Chip size="small" label={o.tipo === "audi" ? "OT Audi" : "Orden de Trabajo"} color={o.tipo === "audi" ? "info" : "default"} />
+                                {/* U_A_TipoOT: B = ingreso a taller, N = reporte de trabajo */}
+                                {o.tipo === "audi" && (o.U_A_TipoOT === "B" || o.U_A_TipoOT === "N") && (
+                                  <Chip
+                                    size="small"
+                                    variant="outlined"
+                                    label={o.U_A_TipoOT === "B" ? "Ingreso" : "Reporte"}
+                                    color={o.U_A_TipoOT === "B" ? "info" : "success"}
+                                  />
+                                )}
+                              </Box>
                             </TableCell>
                             <TableCell>{o.CustomerRefNo || "—"}</TableCell>
                             <TableCell sx={{ maxWidth: 240 }}>{o.CustomerName}</TableCell>

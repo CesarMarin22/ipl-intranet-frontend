@@ -1,6 +1,8 @@
 import {
+  Alert,
   Box,
   Button,
+  Chip,
   CircularProgress,
   FormControlLabel,
   FormLabel,
@@ -13,8 +15,20 @@ import {
   RadioGroup,
   TextField,
   Typography,
+  alpha,
 } from "@mui/material";
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import AssignmentIcon from "@mui/icons-material/Assignment";
+import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
+import ReportProblemIcon from "@mui/icons-material/ReportProblem";
+import PrecisionManufacturingIcon from "@mui/icons-material/PrecisionManufacturing";
+import DescriptionIcon from "@mui/icons-material/Description";
+import InventoryIcon from "@mui/icons-material/Inventory2";
+import ScheduleIcon from "@mui/icons-material/Schedule";
+import GroupsIcon from "@mui/icons-material/Groups";
+import BuildIcon from "@mui/icons-material/Build";
+import LocalShippingIcon from "@mui/icons-material/LocalShipping";
+import SaveIcon from "@mui/icons-material/Save";
 
 import PageHeader from "../../../shared/components/PageHeader";
 import LoaderOverlay from "../../../shared/components/LoaderOverlay";
@@ -209,20 +223,78 @@ function calcularTermino(fechaIso: string, hora: string, horas: string) {
   };
 }
 
-function FieldRow({ label, children }: { label: string; children: ReactNode }) {
+// Required keys (for the asterisk) and the ones left empty on the last save attempt (red highlight)
+const CamposContext = createContext<{ requeridos: Set<string>; faltantes: Set<string> }>({
+  requeridos: new Set(),
+  faltantes: new Set(),
+});
+
+function FieldRow({ label, children, campo }: { label: string; children: ReactNode; campo?: string }) {
+  const { requeridos, faltantes } = useContext(CamposContext);
+  const requerido = campo ? requeridos.has(campo) : false;
+  const falta = campo ? faltantes.has(campo) : false;
+
   return (
     <Box
+      id={campo ? `campo-${campo}` : undefined}
       sx={{
         display: "grid",
         gridTemplateColumns: { xs: "1fr", md: "260px 1fr" },
         gap: 1.5,
         alignItems: "center",
         mb: 2,
+        scrollMarginTop: 96,
       }}
     >
-      <Typography fontWeight={700}>{label}</Typography>
-      <Box>{children}</Box>
+      <Typography fontWeight={700} color={falta ? "error" : undefined}>
+        {label}
+        {requerido && (
+          <Box component="span" sx={{ color: "error.main", ml: 0.5 }}>
+            *
+          </Box>
+        )}
+      </Typography>
+      <Box
+        sx={
+          falta
+            ? { "& .MuiOutlinedInput-notchedOutline": { borderColor: "error.main", borderWidth: 2 } }
+            : undefined
+        }
+      >
+        {children}
+        {falta && (
+          <Typography variant="caption" color="error" sx={{ display: "block", mt: 0.5 }}>
+            Este campo es obligatorio
+          </Typography>
+        )}
+      </Box>
     </Box>
+  );
+}
+
+function Seccion({ icono, titulo, children }: { icono: ReactNode; titulo: string; children: ReactNode }) {
+  return (
+    <Paper sx={{ p: { xs: 2, md: 3 }, borderRadius: 3 }}>
+      <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 2.5 }}>
+        <Box
+          sx={{
+            width: 38,
+            height: 38,
+            borderRadius: 2,
+            display: "grid",
+            placeItems: "center",
+            color: "primary.main",
+            bgcolor: (theme) => alpha(theme.palette.primary.main, 0.14),
+          }}
+        >
+          {icono}
+        </Box>
+        <Typography variant="h6" sx={{ fontWeight: 800 }}>
+          {titulo}
+        </Typography>
+      </Box>
+      {children}
+    </Paper>
   );
 }
 
@@ -352,6 +424,22 @@ export default function OTAudiPage() {
 
     return base;
   }, [isIngreso, isReporte]);
+
+  const [faltantes, setFaltantes] = useState<Set<string>>(new Set());
+
+  // A highlighted field stops being red as soon as it gets a value
+  useEffect(() => {
+    setFaltantes((prev) =>
+      prev.size === 0
+        ? prev
+        : new Set([...prev].filter((campo) => !String(form[campo as keyof FormState] || "").trim())),
+    );
+  }, [form]);
+
+  const contextoCampos = useMemo(
+    () => ({ requeridos: new Set(requiredFields.map((f) => f.key)), faltantes }),
+    [requiredFields, faltantes],
+  );
 
   const handleChange = (key: keyof FormState, value: string) => {
     const rawFields: (keyof FormState)[] = [
@@ -734,15 +822,17 @@ export default function OTAudiPage() {
   };
 
   const validateForm = () => {
-    const faltantes = requiredFields
-      .filter(
-        (field) => !String(form[field.key as keyof FormState] || "").trim(),
-      )
-      .map((field) => field.label);
+    const vacios = requiredFields.filter(
+      (field) => !String(form[field.key as keyof FormState] || "").trim(),
+    );
+    setFaltantes(new Set(vacios.map((field) => field.key)));
 
-    if (faltantes.length > 0) {
+    if (vacios.length > 0) {
+      document
+        .getElementById(`campo-${vacios[0].key}`)
+        ?.scrollIntoView({ behavior: "smooth", block: "center" });
       showWarning(
-        `Por favor, completa los siguientes campos: ${faltantes.join(", ")}`,
+        `Por favor, completa los siguientes campos: ${vacios.map((field) => field.label).join(", ")}`,
         "Campos incompletos en OT Audi",
       );
       return false;
@@ -929,11 +1019,13 @@ export default function OTAudiPage() {
       {saving && <LoaderOverlay label="Guardando OT Audi..." />}
 
       <PageHeader
-        title="Crear OT Audi"
-        subtitle="Captura de Ordenes de Trabajo de Audi"
+        title="Nueva OT Audi"
+        subtitle={isReporte ? "Reporte de trabajo" : "Ingreso a taller"}
       />
 
-      <Paper sx={{ p: { xs: 2, md: 3 }, borderRadius: 3 }}>
+      <CamposContext.Provider value={contextoCampos}>
+      <Box sx={{ display: "grid", gap: 3 }}>
+        <Seccion icono={<AssignmentIcon />} titulo="Tipo de captura">
         <FieldRow label="Usuario de creación de OT">
           <TextField fullWidth value={usuarioCreacion} InputProps={{ readOnly: true }} />
         </FieldRow>
@@ -958,11 +1050,22 @@ export default function OTAudiPage() {
             <FormControlLabel value="REPORTE" control={<Radio />} label="Reporte de Trabajo" />
           </RadioGroup>
         </FieldRow>
+        <Alert
+          severity={isReporte ? "success" : "info"}
+          icon={isReporte ? <BuildIcon /> : <LocalShippingIcon />}
+          sx={{ fontWeight: 700 }}
+        >
+          {isReporte
+            ? "Estás capturando un REPORTE DE TRABAJO: trabajo realizado, diagnóstico, refacciones, horas y técnicos."
+            : "Estás capturando un INGRESO A TALLER: llegada del equipo, horómetro y falla reportada."}
+        </Alert>
+        </Seccion>
 
         {form.tipoCapturaAudi && (
           <>
+            <Seccion icono={<InfoOutlinedIcon />} titulo="Datos generales">
             {isReporte && (
-              <FieldRow label="Folio físico">
+              <FieldRow label="Folio físico" campo="folio">
                 <TextField
                   fullWidth
                   value={form.folio}
@@ -971,7 +1074,7 @@ export default function OTAudiPage() {
               </FieldRow>
             )}
 
-            <FieldRow label="Número de aviso">
+            <FieldRow label="Número de aviso" campo="folioEx">
               <TextField
                 fullWidth
                 value={form.folioEx}
@@ -980,6 +1083,7 @@ export default function OTAudiPage() {
             </FieldRow>
 
             <FieldRow
+              campo="fechaInicio"
               label={
                 isIngreso
                   ? "Fecha de llegada al taller"
@@ -994,6 +1098,7 @@ export default function OTAudiPage() {
             </FieldRow>
 
             <FieldRow
+              campo="horaInicioTrabajo"
               label={
                 isIngreso
                   ? "Hora de llegada al taller"
@@ -1011,7 +1116,7 @@ export default function OTAudiPage() {
               />
             </FieldRow>
 
-            <FieldRow label="Tipo de orden">
+            <FieldRow label="Tipo de orden" campo="tipoOrdenAudi">
               <TextField
                 select
                 fullWidth
@@ -1033,65 +1138,7 @@ export default function OTAudiPage() {
               </TextField>
             </FieldRow>
 
-            {isReporte && (
-              <>
-                <FieldRow label="Defecto">
-                  <TextField
-                    select
-                    fullWidth
-                    value={form.tipoProblema}
-                    onChange={(e) => {
-                      handleChange("tipoProblema", e.target.value);
-                      handleChange("causa", "");
-                      handleChange("tipoDanio", "");
-                    }}
-                  >
-                    {tiposProblema.map((tipo) => (
-                      <MenuItem
-                        key={tipo.ProblemTypeID}
-                        value={String(tipo.ProblemTypeID)}
-                      >
-                        {tipo.Name}
-                      </MenuItem>
-                    ))}
-                  </TextField>
-                </FieldRow>
-
-                <FieldRow label="Causas">
-                  <TextField
-                    select
-                    fullWidth
-                    value={form.causa}
-                    onChange={(e) => handleChange("causa", e.target.value)}
-                    disabled={!form.tipoProblema}
-                  >
-                    {audiOptions.causas.map((item) => (
-                      <MenuItem key={item.code} value={item.code}>
-                        {item.name}
-                      </MenuItem>
-                    ))}
-                  </TextField>
-                </FieldRow>
-
-                <FieldRow label="Tipo de daño">
-                  <TextField
-                    select
-                    fullWidth
-                    value={form.tipoDanio}
-                    onChange={(e) => handleChange("tipoDanio", e.target.value)}
-                    disabled={!form.tipoProblema}
-                  >
-                    {audiOptions.tiposDanio.map((item) => (
-                      <MenuItem key={item.code} value={item.code}>
-                        {item.name}
-                      </MenuItem>
-                    ))}
-                  </TextField>
-                </FieldRow>
-              </>
-            )}
-
-            <FieldRow label="Persona que reporta">
+            <FieldRow label="Persona que reporta" campo="personaReporta">
               <TextField
                 fullWidth
                 value={form.personaReporta}
@@ -1128,7 +1175,72 @@ export default function OTAudiPage() {
               />
             </FieldRow>
 
-            <FieldRow label="No. de serie">
+            </Seccion>
+
+            {isReporte && (
+              <Seccion icono={<ReportProblemIcon />} titulo="Diagnóstico">
+            {isReporte && (
+              <>
+                <FieldRow label="Defecto" campo="tipoProblema">
+                  <TextField
+                    select
+                    fullWidth
+                    value={form.tipoProblema}
+                    onChange={(e) => {
+                      handleChange("tipoProblema", e.target.value);
+                      handleChange("causa", "");
+                      handleChange("tipoDanio", "");
+                    }}
+                  >
+                    {tiposProblema.map((tipo) => (
+                      <MenuItem
+                        key={tipo.ProblemTypeID}
+                        value={String(tipo.ProblemTypeID)}
+                      >
+                        {tipo.Name}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                </FieldRow>
+
+                <FieldRow label="Causas" campo="causa">
+                  <TextField
+                    select
+                    fullWidth
+                    value={form.causa}
+                    onChange={(e) => handleChange("causa", e.target.value)}
+                    disabled={!form.tipoProblema}
+                  >
+                    {audiOptions.causas.map((item) => (
+                      <MenuItem key={item.code} value={item.code}>
+                        {item.name}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                </FieldRow>
+
+                <FieldRow label="Tipo de daño" campo="tipoDanio">
+                  <TextField
+                    select
+                    fullWidth
+                    value={form.tipoDanio}
+                    onChange={(e) => handleChange("tipoDanio", e.target.value)}
+                    disabled={!form.tipoProblema}
+                  >
+                    {audiOptions.tiposDanio.map((item) => (
+                      <MenuItem key={item.code} value={item.code}>
+                        {item.name}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                </FieldRow>
+              </>
+            )}
+              </Seccion>
+            )}
+
+            <Seccion icono={<PrecisionManufacturingIcon />} titulo="Equipo">
+            <FieldRow label="No. de serie" campo="noSerie">
               <Box sx={{ position: "relative" }}>
                 <TextField
                   fullWidth
@@ -1182,7 +1294,7 @@ export default function OTAudiPage() {
               </Box>
             </FieldRow>
 
-            <FieldRow label="Marca">
+            <FieldRow label="Marca" campo="marca">
               <TextField
                 fullWidth
                 value={form.marca}
@@ -1206,7 +1318,7 @@ export default function OTAudiPage() {
               />
             </FieldRow>
 
-            <FieldRow label="Número de artículo">
+            <FieldRow label="Número de artículo" campo="itemCode">
               <TextField
                 fullWidth
                 value={form.itemCode}
@@ -1215,7 +1327,7 @@ export default function OTAudiPage() {
             </FieldRow>
 
             {isIngreso && (
-              <FieldRow label="Horómetro">
+              <FieldRow label="Horómetro" campo="horometro">
                 <TextField
                   fullWidth
                   type="number"
@@ -1225,7 +1337,10 @@ export default function OTAudiPage() {
               </FieldRow>
             )}
 
-            <FieldRow label="Descripción de la falla">
+            </Seccion>
+
+            <Seccion icono={<DescriptionIcon />} titulo="Trabajo">
+            <FieldRow label="Descripción de la falla" campo="descripcionFalla">
               <TextField
                 fullWidth
                 multiline
@@ -1237,11 +1352,7 @@ export default function OTAudiPage() {
               />
             </FieldRow>
 
-            <FieldRow
-              label={
-                "Trabajo realizado"
-              }
-            >
+            <FieldRow label="Trabajo realizado" campo="trabajoRealizado">
               <TextField
                 fullWidth
                 multiline
@@ -1253,10 +1364,13 @@ export default function OTAudiPage() {
               />
             </FieldRow>
 
+            </Seccion>
+
             {isReporte && (
               <>
-                <Box sx={{ mt: 3, mb: 2 }}>
-                  <FormLabel sx={{ fontWeight: 900 }}>Refacciones</FormLabel>
+                <Seccion icono={<InventoryIcon />} titulo="Refacciones">
+                <Box sx={{ mb: 2 }}>
+                  <FormLabel sx={{ fontWeight: 900 }}>Tipo de refacciones</FormLabel>
                   <RadioGroup
                     row
                     value={form.tipoRefacciones}
@@ -1414,7 +1528,10 @@ export default function OTAudiPage() {
                   })}
                 </Paper>
 
-                <FieldRow label="Número de personas que trabajaron">
+                </Seccion>
+
+                <Seccion icono={<ScheduleIcon />} titulo="Tiempos">
+                <FieldRow label="Número de personas que trabajaron" campo="NumPersonas">
                   <TextField
                     fullWidth
                     type="number"
@@ -1425,7 +1542,7 @@ export default function OTAudiPage() {
                   />
                 </FieldRow>
 
-                <FieldRow label="Horas trabajadas">
+                <FieldRow label="Horas trabajadas" campo="horasTrabajadas">
                   <TextField
                     fullWidth
                     type="number"
@@ -1458,10 +1575,12 @@ export default function OTAudiPage() {
                     error={Boolean(errorRangoFechas)}
                   />
                 </FieldRow>
+                </Seccion>
               </>
             )}
 
-            <FieldRow label="Realizó trabajo">
+            <Seccion icono={<GroupsIcon />} titulo="Personal y firmas">
+            <FieldRow label="Realizó trabajo" campo="realizoTrabajo">
               <Box sx={{ position: "relative" }}>
                 <TextField
                   fullWidth
@@ -1607,7 +1726,7 @@ export default function OTAudiPage() {
               </>
             )}
 
-            <FieldRow label="Nombre de REV">
+            <FieldRow label="Nombre de REV" campo="nombreCssr">
               <Box sx={{ position: "relative" }}>
                 <TextField
                   fullWidth
@@ -1713,18 +1832,42 @@ export default function OTAudiPage() {
               />
             </FieldRow>
 
-            <Box textAlign="right" mt={3}>
+            </Seccion>
+
+            <Paper
+              sx={{
+                p: 2,
+                borderRadius: 3,
+                position: "sticky",
+                bottom: 12,
+                zIndex: 5,
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                gap: 2,
+                flexWrap: "wrap",
+              }}
+            >
+              <Chip
+                icon={isReporte ? <BuildIcon /> : <LocalShippingIcon />}
+                label={isReporte ? "Reporte de trabajo" : "Ingreso a taller"}
+                color={isReporte ? "success" : "info"}
+                sx={{ fontWeight: 800 }}
+              />
               <Button
                 variant="contained"
+                size="large"
+                startIcon={<SaveIcon />}
                 onClick={handleGuardar}
                 disabled={saving}
               >
-                {saving ? "Guardando..." : "Guardar OT Audi"}
+                {saving ? "Guardando..." : isReporte ? "Guardar reporte de trabajo" : "Guardar ingreso"}
               </Button>
-            </Box>
+            </Paper>
           </>
         )}
-      </Paper>
+      </Box>
+      </CamposContext.Provider>
     </Box>
   );
 }
