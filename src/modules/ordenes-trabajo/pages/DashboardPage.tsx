@@ -21,6 +21,8 @@ import {
   Tabs,
   TextField,
   Typography,
+  useMediaQuery,
+  useTheme,
 } from "@mui/material";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
@@ -90,6 +92,9 @@ export default function DashboardPage() {
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
   const { canView, canCreate, isLoading: loadingPermisos } = usePermissions();
+  const theme = useTheme();
+  // Below md the 9-11 column tables do not fit, so each record is shown as a card
+  const esMovil = useMediaQuery(theme.breakpoints.down("md"));
 
   const verFlash = canView("OT_SEGURIDAD");
   const verNormal = canView("OT_NORMAL");
@@ -292,16 +297,16 @@ export default function DashboardPage() {
       {tarjetas.length > 0 && (
         <Grid container spacing={2} sx={{ mb: 3 }}>
           {tarjetas.map((t) => (
-            <Grid key={t.label} size={{ xs: 12, sm: 6, md: 12 / tarjetas.length }}>
+            <Grid key={t.label} size={{ xs: 6, md: 12 / tarjetas.length }}>
               <Card sx={{ background: t.fondo, height: "100%" }}>
-                <CardContent sx={{ color: t.color }}>
-                  <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+                <CardContent sx={{ color: t.color, p: { xs: 1.5, sm: 2 }, "&:last-child": { pb: { xs: 1.5, sm: 2 } } }}>
+                  <Box sx={{ display: "flex", alignItems: "center", gap: { xs: 1, sm: 2 }, "& .MuiSvgIcon-root": { fontSize: { xs: 28, sm: 40 } } }}>
                     {t.icono}
                     <Box>
                       <Typography variant="caption" sx={{ opacity: 0.85 }}>
                         {t.label}
                       </Typography>
-                      <Typography variant="h5" sx={{ fontWeight: 700 }}>
+                      <Typography variant="h5" sx={{ fontWeight: 700, fontSize: { xs: "1.25rem", sm: "1.5rem" } }}>
                         {t.valor}
                       </Typography>
                     </Box>
@@ -322,7 +327,10 @@ export default function DashboardPage() {
           <Tabs
             value={vista}
             onChange={(_, nueva) => setSearchParams(nueva === "ot" ? { vista: "ot" } : {}, { replace: true })}
-            sx={{ px: 2, borderBottom: 1, borderColor: "divider" }}
+            variant="scrollable"
+            scrollButtons="auto"
+            allowScrollButtonsMobile
+            sx={{ px: { xs: 0, sm: 2 }, borderBottom: 1, borderColor: "divider" }}
           >
             {verFlash && <Tab value="flash" label={`Flash Reports (${flash.length})`} icon={<SecurityIcon />} iconPosition="start" />}
             {verOT && <Tab value="ot" label="Órdenes de Trabajo" icon={<AssignmentIcon />} iconPosition="start" />}
@@ -349,7 +357,7 @@ export default function DashboardPage() {
                       },
                     }}
                   />
-                  <TextField select size="small" label="Severidad" value={filtroSeveridad} onChange={(e) => filtrar("sev", e.target.value)} sx={{ minWidth: 170 }}>
+                  <TextField select size="small" label="Severidad" value={filtroSeveridad} onChange={(e) => filtrar("sev", e.target.value)} sx={{ flex: { xs: "1 1 100%", sm: "0 1 auto" }, minWidth: { sm: 170 } }}>
                     <MenuItem value="">Todas</MenuItem>
                     {opcionesSeveridad.map(([valor, etiqueta]) => (
                       <MenuItem key={valor} value={valor}>
@@ -357,7 +365,7 @@ export default function DashboardPage() {
                       </MenuItem>
                     ))}
                   </TextField>
-                  <TextField select size="small" label="Clasificación" value={filtroClasificacion} onChange={(e) => filtrar("clas", e.target.value)} sx={{ minWidth: 160 }}>
+                  <TextField select size="small" label="Clasificación" value={filtroClasificacion} onChange={(e) => filtrar("clas", e.target.value)} sx={{ flex: { xs: "1 1 100%", sm: "0 1 auto" }, minWidth: { sm: 160 } }}>
                     <MenuItem value="">Todas</MenuItem>
                     {opcionesClasificacion.map((c) => (
                       <MenuItem key={c} value={c}>
@@ -365,7 +373,7 @@ export default function DashboardPage() {
                       </MenuItem>
                     ))}
                   </TextField>
-                  <TextField select size="small" label="Estatus" value={filtroEstatus} onChange={(e) => filtrar("est", e.target.value)} sx={{ minWidth: 150 }}>
+                  <TextField select size="small" label="Estatus" value={filtroEstatus} onChange={(e) => filtrar("est", e.target.value)} sx={{ flex: { xs: "1 1 100%", sm: "0 1 auto" }, minWidth: { sm: 150 } }}>
                     <MenuItem value="">Todos</MenuItem>
                     {Object.keys(ESTATUS_COLOR).map((e) => (
                       <MenuItem key={e} value={e}>
@@ -386,6 +394,52 @@ export default function DashboardPage() {
                     : `${flashFiltrados.length} de ${flash.length} Flash Reports`}
                 </Typography>
 
+                {esMovil ? (
+                  <Box sx={{ display: "grid", gap: 1.5 }}>
+                    {flashPagina.length === 0 ? (
+                      <Typography color="text.secondary" sx={{ textAlign: "center", py: 4 }}>
+                        {hayFiltrosFlash ? "Ningún Flash Report coincide con los filtros." : "No hay Flash Reports."}
+                      </Typography>
+                    ) : (
+                      flashPagina.map((f, i) => (
+                        <Paper key={f.DocNum} variant="outlined" sx={{ p: 2, borderRadius: 2, ...filaSeleccionada(f.DocNum) }}>
+                          <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 1 }}>
+                            <Box sx={{ minWidth: 0 }}>
+                              <Typography variant="caption" color="text.secondary">
+                                #{(paginaFlash - 1) * POR_PAGINA + i + 1} · {f.FechaFormateada}
+                              </Typography>
+                              <Typography sx={{ fontWeight: 800 }}>Folio {f.DocNum}</Typography>
+                            </Box>
+                            <Chip
+                              size="small"
+                              label={f.EstatusSeguimiento}
+                              sx={{ bgcolor: ESTATUS_COLOR[f.EstatusSeguimiento] || "#9e9e9e", color: "#fff", fontWeight: 700 }}
+                            />
+                          </Box>
+                          <Box sx={{ display: "flex", gap: 0.75, flexWrap: "wrap", my: 1 }}>
+                            <Chip
+                              size="small"
+                              label={f.SeveridadEtiqueta || f.U_Severidad}
+                              sx={{ bgcolor: f.SeveridadColorFondo, color: f.SeveridadColorTexto, fontWeight: 700 }}
+                            />
+                            <Chip
+                              size="small"
+                              variant="outlined"
+                              label={f.RelacionNombre && f.RelacionNombre !== "N/A" ? `${f.ClasificacionNombre} · ${f.RelacionNombre}` : f.ClasificacionNombre}
+                            />
+                          </Box>
+                          <Typography variant="body2" sx={{ fontWeight: 600 }}>{f.CustomerName}</Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            {f.SucursalName} · {f.U_CreateUser}
+                          </Typography>
+                          <Button fullWidth size="small" variant="outlined" startIcon={<VisibilityIcon />} sx={{ mt: 1.5 }} onClick={() => handleVer(f.DocNum)}>
+                            Ver
+                          </Button>
+                        </Paper>
+                      ))
+                    )}
+                  </Box>
+                ) : (
                 <TableContainer>
                   <Table size="small">
                     <TableHead sx={{ bgcolor: "primary.main" }}>
@@ -450,10 +504,11 @@ export default function DashboardPage() {
                     </TableBody>
                   </Table>
                 </TableContainer>
+                )}
 
                 {paginasFlash > 1 && (
                   <Box sx={{ display: "flex", justifyContent: "center", mt: 3 }}>
-                    <Pagination count={paginasFlash} page={paginaFlash} onChange={(_, value) => actualizar({ page: value })} color="primary" />
+                    <Pagination count={paginasFlash} page={paginaFlash} onChange={(_, value) => actualizar({ page: value })} color="primary" size={esMovil ? "small" : "medium"} siblingCount={esMovil ? 0 : 1} />
                   </Box>
                 )}
               </>
@@ -462,7 +517,7 @@ export default function DashboardPage() {
                 {/* Work orders */}
                 {verAudi && (
                   <Box sx={{ mb: 2.5 }}>
-                    <TextField select size="small" label="Tipo" value={filtroTipoOT} onChange={(e) => actualizar({ tipo: e.target.value, page: 1 })} sx={{ minWidth: 240 }}>
+                    <TextField select size="small" label="Tipo" value={filtroTipoOT} onChange={(e) => actualizar({ tipo: e.target.value, page: 1 })} sx={{ width: { xs: "100%", sm: "auto" }, minWidth: { sm: 240 } }}>
                       <MenuItem value="">Todas</MenuItem>
                       {verNormal && <MenuItem value="normal">Orden de Trabajo</MenuItem>}
                       <MenuItem value="audi">OT Audi (todas)</MenuItem>
@@ -474,6 +529,51 @@ export default function DashboardPage() {
 
                 {cargandoOT && <LinearProgress sx={{ mb: 1 }} />}
 
+                {esMovil ? (
+                  <Box sx={{ display: "grid", gap: 1.5 }}>
+                    {otsVisibles.length === 0 ? (
+                      <Typography color="text.secondary" sx={{ textAlign: "center", py: 4 }}>No hay órdenes de trabajo.</Typography>
+                    ) : (
+                      otsVisibles.map((o, i) => (
+                        <Paper key={`${o.tipo}-${o.DocNum}`} variant="outlined" sx={{ p: 2, borderRadius: 2, ...filaSeleccionada(o.DocNum) }}>
+                          <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 1 }}>
+                            <Box sx={{ minWidth: 0 }}>
+                              <Typography variant="caption" color="text.secondary">
+                                #{(page - 1) * POR_PAGINA * fuentesOT + i + 1} · {o.FechaFormateada}
+                              </Typography>
+                              <Typography sx={{ fontWeight: 800 }}>Folio {o.DocNum}</Typography>
+                            </Box>
+                            <Box sx={{ display: "flex", gap: 0.5, flexWrap: "wrap", justifyContent: "flex-end" }}>
+                              <Chip size="small" label={o.tipo === "audi" ? "OT Audi" : "Orden de Trabajo"} color={o.tipo === "audi" ? "info" : "default"} />
+                              {o.tipo === "audi" && (o.U_A_TipoOT === "B" || o.U_A_TipoOT === "N") && (
+                                <Chip
+                                  size="small"
+                                  variant="outlined"
+                                  label={o.U_A_TipoOT === "B" ? "Ingreso" : "Reporte"}
+                                  color={o.U_A_TipoOT === "B" ? "info" : "success"}
+                                />
+                              )}
+                            </Box>
+                          </Box>
+                          <Typography variant="body2" sx={{ fontWeight: 600, mt: 1 }}>{o.CustomerName}</Typography>
+                          <Typography variant="caption" color="text.secondary" component="div">
+                            {[
+                              o.CustomerRefNo && `Folio físico ${o.CustomerRefNo}`,
+                              o.tipo === "audi" && o.U_A_FolioE && `Aviso ${o.U_A_FolioE}`,
+                              o.ManufacturerSerialNum && `Serie ${o.ManufacturerSerialNum}`,
+                            ]
+                              .filter(Boolean)
+                              .join(" · ")}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">Creado por {o.U_CreateUser}</Typography>
+                          <Button fullWidth size="small" variant="outlined" startIcon={<VisibilityIcon />} sx={{ mt: 1.5 }} onClick={() => handleVer(o.DocNum)}>
+                            Ver
+                          </Button>
+                        </Paper>
+                      ))
+                    )}
+                  </Box>
+                ) : (
                 <TableContainer>
                   <Table size="small">
                     <TableHead sx={{ bgcolor: "primary.main" }}>
@@ -539,10 +639,11 @@ export default function DashboardPage() {
                     </TableBody>
                   </Table>
                 </TableContainer>
+                )}
 
                 {otTotales.paginas > 1 && (
                   <Box sx={{ display: "flex", justifyContent: "center", mt: 3 }}>
-                    <Pagination count={otTotales.paginas} page={page} onChange={(_, value) => actualizar({ page: value })} color="primary" />
+                    <Pagination count={otTotales.paginas} page={page} onChange={(_, value) => actualizar({ page: value })} color="primary" size={esMovil ? "small" : "medium"} siblingCount={esMovil ? 0 : 1} />
                   </Box>
                 )}
               </>
