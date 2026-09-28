@@ -22,6 +22,7 @@ import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import DeleteIcon from "@mui/icons-material/Delete";
 import PrintIcon from "@mui/icons-material/Print";
 import CloseIcon from "@mui/icons-material/Close";
+import TipsAndUpdatesIcon from "@mui/icons-material/TipsAndUpdates";
 
 import PageHeader from "../../../shared/components/PageHeader";
 import BotonVolverServicio from "../../../shared/components/BotonVolverServicio";
@@ -80,6 +81,20 @@ function getCalFmt15Link(tipo: string, nivel: string): string | null {
   if (tipo === "28" && ["Alto", "CriticaO"].includes(nivel)) return LINK_CAL_OPERACION_VEHICULOS;
   if (tipo === "27" && ["ModeradaV", "CriticaV"].includes(nivel)) return LINK_CAL_OPERACION_VEHICULOS;
   return null;
+}
+
+// Writing guide shown above a field; hidden when printing
+function GuiaCampo({ texto }: { texto: string }) {
+  return (
+    <Alert
+      severity="info"
+      icon={<TipsAndUpdatesIcon fontSize="small" />}
+      className="no-print"
+      sx={{ py: 0.25, "& .MuiAlert-message": { fontSize: 13 } }}
+    >
+      {texto}
+    </Alert>
+  );
 }
 
 interface ImageFile {
@@ -614,6 +629,8 @@ export default function OTSeguridadPage() {
           )}
 
           {/* 11. Descripción del Suceso */}
+          <Box sx={{ display: "grid", gap: 1 }}>
+          <GuiaCampo texto="¿Qué estabas haciendo? ¿Qué ocurrió? ¿Qué hiciste o dejaste de hacer que contribuyó al suceso? Describe los hechos, evitando justificar o minimizar lo ocurrido." />
           <TextField
             label="Descripción del Suceso"
             value={form.descripcionSuceso}
@@ -623,8 +640,11 @@ export default function OTSeguridadPage() {
             fullWidth
             required
           />
+          </Box>
 
           {/* 12. Posible Causa */}
+          <Box sx={{ display: "grid", gap: 1 }}>
+          <GuiaCampo texto="Ve más allá del error humano: ¿Qué condición o decisión derivó que ocurriera el suceso? Considera procedimiento, capacitación, comunicación, equipo, entorno y factores humanos." />
           <TextField
             label="Posible Causa"
             value={form.posibleCausa}
@@ -638,6 +658,7 @@ export default function OTSeguridadPage() {
             fullWidth
             helperText={`${form.posibleCausa.length} / 254 caracteres`}
           />
+          </Box>
 
           {/* 13. Acciones realizadas para atender la situación */}
           <TextField
@@ -650,14 +671,17 @@ export default function OTSeguridadPage() {
           />
 
           {/* 14. Plan de acción */}
+          <Box sx={{ display: "grid", gap: 1 }}>
+          <GuiaCampo texto="Hazlo accionable: ¿Qué cambiaremos para evitar la recurrencia? Define la acción, responsable y fecha compromiso. Evita acciones genéricas como “poner más atención” o “tener más cuidado”." />
           <TextField
             label="Plan de acción"
             value={form.planAccion}
             onChange={(e) => handleChange("planAccion", e.target.value)}
             multiline
-            rows={2}
+            rows={3}
             fullWidth
           />
+          </Box>
 
           {/* 15. Lecciones aprendidas */}
           <TextField
