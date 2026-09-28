@@ -316,7 +316,7 @@ export default function SGCDocumentsPage() {
       row.FECHA_LIMITE ? row.FECHA_LIMITE.slice(0, 10) : "",
     );
     const version = row.ULTIMA_VERSION;
-    setAuthorizeNumero(String(version?.NUMERO_VERSION || ""));
+    setAuthorizeNumero(String(version?.NUMERO_VERSION ?? ""));
     const descripcionPrevia =
       version?.DESCRIPCION_CAMBIO && version.DESCRIPCION_CAMBIO !== "Pendiente de Calidad"
         ? version.DESCRIPCION_CAMBIO
@@ -338,8 +338,11 @@ export default function SGCDocumentsPage() {
     if (!authorizeDialogRow || !authorizeDialogRow.ULTIMA_VERSION) return;
 
     const numero = Number(authorizeNumero);
-    if (!(authorizeSinCambios && authorizeDialogRow?.VERSION_ACTIVA_NUMERO) && (!Number.isInteger(numero) || numero <= 0)) {
-      await showWarning("Captura el número de versión (un número entero mayor a 0).");
+    if (
+      !(authorizeSinCambios && authorizeDialogRow?.VERSION_ACTIVA_NUMERO != null) &&
+      (authorizeNumero.trim() === "" || !Number.isInteger(numero) || numero < 0)
+    ) {
+      await showWarning("Captura el número de versión (un número entero, 0 o mayor).");
       return;
     }
     if (!authorizeSinCambios && !authorizeDescripcion.trim()) {
@@ -900,7 +903,7 @@ export default function SGCDocumentsPage() {
                         />
                       )}
                       <AprobacionChip estado={row.ESTADO_APROBACION} />
-                      {row.VERSION_ACTIVA_NUMERO && (
+                      {row.VERSION_ACTIVA_NUMERO != null && (
                         <Chip
                           label={`v${row.VERSION_ACTIVA_NUMERO} vigente`}
                           size="small"
@@ -1054,7 +1057,7 @@ export default function SGCDocumentsPage() {
               onChange={(e) => {
                 const revision = e.target.value === "revision";
                 setAuthorizeSinCambios(revision);
-                setAuthorizeNumero(String((revision && authorizeDialogRow?.VERSION_ACTIVA_NUMERO ? authorizeDialogRow?.VERSION_ACTIVA_NUMERO : authorizeDialogRow?.ULTIMA_VERSION?.NUMERO_VERSION) || ""));
+                setAuthorizeNumero(String((revision && authorizeDialogRow?.VERSION_ACTIVA_NUMERO != null ? authorizeDialogRow?.VERSION_ACTIVA_NUMERO : authorizeDialogRow?.ULTIMA_VERSION?.NUMERO_VERSION) ?? ""));
                 setAuthorizeDescripcion(revision ? "Revisión sin cambios" : "");
               }}
             >
@@ -1062,20 +1065,20 @@ export default function SGCDocumentsPage() {
               <FormControlLabel
                 value="revision"
                 control={<Radio />}
-                label={authorizeDialogRow?.VERSION_ACTIVA_NUMERO ? `Revisión sin cambios (se conserva la versión ${authorizeDialogRow?.VERSION_ACTIVA_NUMERO})` : "Revisión sin cambios (indica qué versión se revisó)"}
+                label={authorizeDialogRow?.VERSION_ACTIVA_NUMERO != null ? `Revisión sin cambios (se conserva la versión ${authorizeDialogRow?.VERSION_ACTIVA_NUMERO})` : "Revisión sin cambios (indica qué versión se revisó)"}
               />
             </RadioGroup>
             <TextField
               fullWidth
-              required={!(authorizeSinCambios && authorizeDialogRow?.VERSION_ACTIVA_NUMERO)}
-              disabled={Boolean(authorizeSinCambios && authorizeDialogRow?.VERSION_ACTIVA_NUMERO)}
+              required={!(authorizeSinCambios && authorizeDialogRow?.VERSION_ACTIVA_NUMERO != null)}
+              disabled={authorizeSinCambios && authorizeDialogRow?.VERSION_ACTIVA_NUMERO != null}
               type="number"
               label="Número de versión"
               value={authorizeNumero}
               onChange={(e) => setAuthorizeNumero(e.target.value)}
-              slotProps={{ htmlInput: { min: 1, step: 1 } }}
+              slotProps={{ htmlInput: { min: 0, step: 1 } }}
               helperText={
-                authorizeSinCambios && authorizeDialogRow?.VERSION_ACTIVA_NUMERO
+                authorizeSinCambios && authorizeDialogRow?.VERSION_ACTIVA_NUMERO != null
                   ? "Una revisión sin cambios conserva el número de la versión vigente."
                   : authorizeSinCambios
                     ? "Captura la versión que se revisó (por ejemplo, la que ya traía el documento en papel)."
