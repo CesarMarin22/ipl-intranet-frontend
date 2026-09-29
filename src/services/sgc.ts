@@ -386,30 +386,55 @@ export const SGCCodificacionService = {
   },
 };
 
+export type SGCVigenciaExterno = SGCEstado | "SIN_CADUCIDAD";
+
 export type SGCExternalDocument = {
   SGCEXTID: number;
   TITULO: string;
   ORIGEN?: string | null;
   FECHA_RECEPCION?: string | null;
+  EDICION?: string | null;
+  FECHA_VIGENCIA?: string | null;
+  SIN_CADUCIDAD?: number | null;
+  ESTADO_VIGENCIA: SGCVigenciaExterno;
+  DIAS_VIGENCIA?: number | null;
   ARCHIVO_NOMBRE_ORIGINAL?: string | null;
   ARCHIVO_DISPONIBLE: boolean;
   ACTIVO: number;
   FECHA_REGISTRO?: string | null;
   REGISTRADO_POR_NOMBRE?: string | null;
-  VISIBILIDAD?: string | null;
   DEPAID?: number | null;
   DEPARTAMENTO_NOMBRE?: string | null;
   SUCURSAL?: string | null;
+  /** Each new version received: when and which edition, newest first */
+  HISTORIAL: { FECHA: string; EDICION: string | null }[];
 };
 
-export type SGCExternalDocumentCreatePayload = {
+export type SGCExternalDocumentPayload = {
   TITULO: string;
   ORIGEN?: string | null;
   FECHA_RECEPCION?: string | null;
-  VISIBILIDAD?: string | null;
+  EDICION: string;
+  SIN_CADUCIDAD: boolean;
+  FECHA_VIGENCIA?: string | null;
+  /** Only honored for Calidad; other users always register for their own department/branch */
   DEPAID?: number | null;
   SUCURSAL?: string | null;
   file?: File | null;
+};
+
+const externalFormData = (payload: SGCExternalDocumentPayload) => {
+  const fd = new FormData();
+  fd.append("TITULO", payload.TITULO);
+  fd.append("EDICION", payload.EDICION);
+  if (payload.ORIGEN) fd.append("ORIGEN", payload.ORIGEN);
+  if (payload.FECHA_RECEPCION) fd.append("FECHA_RECEPCION", payload.FECHA_RECEPCION);
+  if (payload.SIN_CADUCIDAD) fd.append("SIN_CADUCIDAD", "1");
+  else if (payload.FECHA_VIGENCIA) fd.append("FECHA_VIGENCIA", payload.FECHA_VIGENCIA);
+  if (payload.DEPAID) fd.append("DEPAID", String(payload.DEPAID));
+  if (payload.SUCURSAL) fd.append("SUCURSAL", payload.SUCURSAL);
+  if (payload.file) fd.append("file", payload.file);
+  return fd;
 };
 
 export const SGCExternalDocumentsService = {
@@ -420,20 +445,19 @@ export const SGCExternalDocumentsService = {
     return validateResponse(data) ?? [];
   },
 
-  create: async (payload: SGCExternalDocumentCreatePayload) => {
-    const fd = new FormData();
-    fd.append("TITULO", payload.TITULO);
-    if (payload.ORIGEN) fd.append("ORIGEN", payload.ORIGEN);
-    if (payload.FECHA_RECEPCION)
-      fd.append("FECHA_RECEPCION", payload.FECHA_RECEPCION);
-    if (payload.VISIBILIDAD) fd.append("VISIBILIDAD", payload.VISIBILIDAD);
-    if (payload.DEPAID) fd.append("DEPAID", String(payload.DEPAID));
-    if (payload.SUCURSAL) fd.append("SUCURSAL", payload.SUCURSAL);
-    if (payload.file) fd.append("file", payload.file);
-
+  create: async (payload: SGCExternalDocumentPayload) => {
     const { data } = await api.post<ApiResponse<{ SGCEXTID: number }>>(
       "/sgc/external-documents",
-      fd,
+      externalFormData(payload),
+      { headers: { "Content-Type": "multipart/form-data" } },
+    );
+    return validateResponse(data);
+  },
+
+  update: async (id: number, payload: SGCExternalDocumentPayload) => {
+    const { data } = await api.put<ApiResponse<null>>(
+      `/sgc/external-documents/${id}`,
+      externalFormData(payload),
       { headers: { "Content-Type": "multipart/form-data" } },
     );
     return validateResponse(data);
