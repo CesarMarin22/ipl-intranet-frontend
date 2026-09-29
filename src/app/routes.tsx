@@ -41,6 +41,10 @@ import DetallesOTPage from "../modules/ordenes-trabajo/pages/DetallesOTPage";
 import SGCDocumentsPage from "../modules/sgc/pages/SGCDocumentsPage";
 import SGCDocumentFormPage from "../modules/sgc/pages/SGCDocumentFormPage";
 import SGCExternalDocumentsPage from "../modules/sgc/pages/SGCExternalDocumentsPage";
+import RelojChecarPage from "../modules/reloj/pages/RelojChecarPage";
+import RelojAsistenciaPage from "../modules/reloj/pages/RelojAsistenciaPage";
+import RelojGratificacionesPage from "../modules/reloj/pages/RelojGratificacionesPage";
+import RelojConfigPage from "../modules/reloj/pages/RelojConfigPage";
 
 export default function AppRoutes({
   authenticated,
@@ -464,6 +468,42 @@ export default function AppRoutes({
           element={
             <ProtectedModuleRoute moduleName="SGC_DOCUMENTOS" actionName="VER">
               <SGCExternalDocumentsPage />
+            </ProtectedModuleRoute>
+          }
+        />
+
+        <Route
+          path="/reloj/checar"
+          element={
+            <ProtectedModuleRoute moduleName="RELOJ_CHECAR" actionName="VER">
+              <RelojChecarPage />
+            </ProtectedModuleRoute>
+          }
+        />
+
+        <Route
+          path="/reloj/asistencia"
+          element={
+            <ProtectedModuleRoute moduleName="RELOJ_ASISTENCIA" actionName="VER">
+              <RelojAsistenciaPage />
+            </ProtectedModuleRoute>
+          }
+        />
+
+        <Route
+          path="/reloj/gratificaciones"
+          element={
+            <ProtectedModuleRoute moduleName="RELOJ_GRATIFICACIONES" actionName="VER">
+              <RelojGratificacionesPage />
+            </ProtectedModuleRoute>
+          }
+        />
+
+        <Route
+          path="/reloj/configuracion"
+          element={
+            <ProtectedModuleRoute moduleName="RELOJ_CONFIG" actionName="VER">
+              <RelojConfigPage />
             </ProtectedModuleRoute>
           }
         />

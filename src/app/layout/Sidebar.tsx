@@ -41,6 +41,10 @@ import ListAltIcon from "@mui/icons-material/ListAlt";
 import StoreIcon from "@mui/icons-material/Store";
 import FactCheckIcon from "@mui/icons-material/FactCheck";
 import LanguageIcon from "@mui/icons-material/Language";
+import AccessTimeIcon from "@mui/icons-material/AccessTime";
+import FingerprintIcon from "@mui/icons-material/Fingerprint";
+import EventNoteIcon from "@mui/icons-material/EventNote";
+import CardGiftcardIcon from "@mui/icons-material/CardGiftcard";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { IPL } from "../../shared/theme/theme";
@@ -99,6 +103,12 @@ const ICONOS_POR_CLAVE: Record<string, () => ReactNode> = {
   FLASH_REPORT: () => <ReportProblemIcon />,
   SEGUIMIENTO_FLASH: () => <TaskAltIcon />,
   VER_OT: () => <ListAltIcon />,
+
+  RELOJ: () => <AccessTimeIcon />,
+  RELOJ_CHECAR: () => <FingerprintIcon />,
+  RELOJ_ASISTENCIA: () => <EventNoteIcon />,
+  RELOJ_GRATIFICACIONES: () => <CardGiftcardIcon />,
+  RELOJ_CONFIG: () => <SettingsIcon />,
 
   SGC: () => <DescriptionIcon />,
   SGC_DOCUMENTOS: () => <DescriptionIcon />,

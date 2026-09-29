@@ -3,6 +3,7 @@ import type { EffectivePermissionRow } from "../../services/permissions";
 export function getFirstAllowedRoute(permissions: EffectivePermissionRow[]) {
   const routes = [
   { module: "MY_QR", path: "/comedor/my-qr" },
+  { module: "RELOJ_CHECAR", path: "/reloj/checar" },
   { module: "CONSUMO_COMEDOR", path: "/comedor/saldo" },
 
   { module: "COMEDOR", path: "/comedor/scan" },
