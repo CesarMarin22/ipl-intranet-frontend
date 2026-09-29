@@ -406,6 +406,9 @@ export type SGCExternalDocument = {
   DEPAID?: number | null;
   DEPARTAMENTO_NOMBRE?: string | null;
   SUCURSAL?: string | null;
+  VISIBILIDAD?: string | null;
+  /** Only the owner department and Calidad can edit, upload versions, activate or delete */
+  PUEDE_EDITAR: boolean;
   /** Each new version received: when and which edition, newest first */
   HISTORIAL: { FECHA: string; EDICION: string | null }[];
 };
@@ -417,6 +420,8 @@ export type SGCExternalDocumentPayload = {
   EDICION: string;
   SIN_CADUCIDAD: boolean;
   FECHA_VIGENCIA?: string | null;
+  /** Confidencial: department · Interno: the owner's branch · Público: everyone */
+  VISIBILIDAD: string;
   /** Only honored for Calidad; other users always register for their own department/branch */
   DEPAID?: number | null;
   SUCURSAL?: string | null;
@@ -427,6 +432,7 @@ const externalFormData = (payload: SGCExternalDocumentPayload) => {
   const fd = new FormData();
   fd.append("TITULO", payload.TITULO);
   fd.append("EDICION", payload.EDICION);
+  fd.append("VISIBILIDAD", payload.VISIBILIDAD);
   if (payload.ORIGEN) fd.append("ORIGEN", payload.ORIGEN);
   if (payload.FECHA_RECEPCION) fd.append("FECHA_RECEPCION", payload.FECHA_RECEPCION);
   if (payload.SIN_CADUCIDAD) fd.append("SIN_CADUCIDAD", "1");

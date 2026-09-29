@@ -37,6 +37,7 @@ import {
   type SGCExternalDocument,
   type SGCCatalogDepartment,
   type SGCVigenciaExterno,
+  VISIBILIDAD_OPCIONES,
 } from "../../../services/sgc";
 import { getSucursales, type SucursalRow as Sucursal } from "../../../services/sucursales";
 import { useAppMutation } from "../../../shared/hooks/useAppMutation";
@@ -75,10 +76,17 @@ function textoVigencia(row: SGCExternalDocument) {
   }
 }
 
+const AYUDA_VISIBILIDAD: Record<string, string> = {
+  Confidencial: "Solo lo ve tu departamento (y Calidad).",
+  Interno: "Lo ve toda la sucursal del responsable (y Calidad).",
+  "Público": "Lo puede ver cualquier persona de la empresa.",
+};
+
 type FormState = {
   titulo: string;
   origen: string;
   edicion: string;
+  visibilidad: string;
   fechaRecepcion: string;
   sinCaducidad: boolean;
   fechaVigencia: string;
@@ -91,6 +99,7 @@ const formularioVacio: FormState = {
   titulo: "",
   origen: "",
   edicion: "",
+  visibilidad: "Confidencial",
   fechaRecepcion: "",
   sinCaducidad: false,
   fechaVigencia: "",
@@ -132,6 +141,7 @@ export default function SGCExternalDocumentsPage() {
     TITULO: form.titulo.trim(),
     ORIGEN: form.origen.trim() || null,
     EDICION: form.edicion.trim(),
+    VISIBILIDAD: form.visibilidad,
     FECHA_RECEPCION: form.fechaRecepcion || null,
     SIN_CADUCIDAD: form.sinCaducidad,
     FECHA_VIGENCIA: form.sinCaducidad ? null : form.fechaVigencia || null,
@@ -208,6 +218,7 @@ export default function SGCExternalDocumentsPage() {
       titulo: row.TITULO || "",
       origen: row.ORIGEN || "",
       edicion: row.EDICION || "",
+      visibilidad: row.VISIBILIDAD || "Confidencial",
       fechaRecepcion: (row.FECHA_RECEPCION || "").slice(0, 10),
       sinCaducidad: Number(row.SIN_CADUCIDAD) === 1,
       fechaVigencia: (row.FECHA_VIGENCIA || "").slice(0, 10),
@@ -255,7 +266,7 @@ export default function SGCExternalDocumentsPage() {
         subtitle={
           esCalidad
             ? "Normas, manuales y referencias de terceros de todos los departamentos."
-            : "Normas, manuales y referencias de terceros de tu departamento. Solo los ven tu departamento y Calidad."
+            : "Normas, manuales y referencias de terceros: los de tu departamento y los compartidos con tu sucursal o con toda la empresa."
         }
         action={
           <Stack direction="row" spacing={1} sx={{ flexWrap: "wrap", gap: 1 }}>
@@ -313,6 +324,7 @@ export default function SGCExternalDocumentsPage() {
                       </Typography>
                     </Box>
                     <Stack direction="row" spacing={1} sx={{ flexWrap: "wrap", gap: 0.5 }}>
+                      {row.VISIBILIDAD && <Chip label={row.VISIBILIDAD} size="small" variant="outlined" color="secondary" />}
                       {row.EDICION && <Chip label={`Edición: ${row.EDICION}`} size="small" variant="outlined" />}
                       <Chip label={textoVigencia(row)} size="small" color={VIGENCIA_COLOR[row.ESTADO_VIGENCIA] ?? "default"} />
                       {row.ACTIVO !== 1 && <Chip label="Inactivo" size="small" />}
@@ -337,23 +349,29 @@ export default function SGCExternalDocumentsPage() {
                         Descargar
                       </Button>
                     )}
-                    <Button size="small" variant="outlined" startIcon={<EditIcon />} onClick={() => abrirEditar(row)}>
-                      Editar / nueva versión
-                    </Button>
+                    {row.PUEDE_EDITAR && (
+                      <Button size="small" variant="outlined" startIcon={<EditIcon />} onClick={() => abrirEditar(row)}>
+                        Editar / nueva versión
+                      </Button>
+                    )}
                     <Button size="small" variant="outlined" startIcon={<HistoryIcon />} onClick={() => toggleHistorial(row.SGCEXTID)}>
                       Historial ({row.HISTORIAL.length})
                     </Button>
-                    <Button
-                      size="small"
-                      variant="outlined"
-                      color={row.ACTIVO === 1 ? "warning" : "success"}
-                      onClick={() => statusMutation.mutate({ id: row.SGCEXTID, activo: row.ACTIVO === 1 ? 0 : 1 })}
-                    >
-                      {row.ACTIVO === 1 ? "Desactivar" : "Activar"}
-                    </Button>
-                    <Button size="small" color="error" variant="outlined" onClick={() => handleDelete(row)}>
-                      Eliminar
-                    </Button>
+                    {row.PUEDE_EDITAR && (
+                      <>
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          color={row.ACTIVO === 1 ? "warning" : "success"}
+                          onClick={() => statusMutation.mutate({ id: row.SGCEXTID, activo: row.ACTIVO === 1 ? 0 : 1 })}
+                        >
+                          {row.ACTIVO === 1 ? "Desactivar" : "Activar"}
+                        </Button>
+                        <Button size="small" color="error" variant="outlined" onClick={() => handleDelete(row)}>
+                          Eliminar
+                        </Button>
+                      </>
+                    )}
                   </Stack>
 
                   <Collapse in={historialAbierto.has(row.SGCEXTID)}>
@@ -399,6 +417,20 @@ export default function SGCExternalDocumentsPage() {
               placeholder="Ej. NOM-035-STPS-2018, Rev. 4"
               helperText={editando ? "Si cambias la edición se registra como nueva versión en el historial." : " "}
             />
+            <FormControl fullWidth>
+              <InputLabel>Clasificación</InputLabel>
+              <Select label="Clasificación" value={form.visibilidad} onChange={(e) => cambio("visibilidad", e.target.value)}>
+                {VISIBILIDAD_OPCIONES.map((v) => (
+                  <MenuItem key={v} value={v}>
+                    {v}
+                  </MenuItem>
+                ))}
+              </Select>
+              <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, ml: 1.5 }}>
+                {AYUDA_VISIBILIDAD[form.visibilidad]}
+              </Typography>
+            </FormControl>
+
             <TextField
               label="Fecha de recepción"
               type="date"
@@ -455,7 +487,7 @@ export default function SGCExternalDocumentsPage() {
               </>
             ) : (
               !editando && (
-                <Alert severity="info">Se registrará para tu departamento y tu sucursal. Solo lo verán tu departamento y Calidad.</Alert>
+                <Alert severity="info">Se registrará para tu departamento y tu sucursal; quién más lo ve depende de la clasificación.</Alert>
               )
             )}
 
